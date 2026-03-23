@@ -1,0 +1,139 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f2c, #111c44, #1a2a6c);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 450px;
+  padding: 20px;
+}
+
+.auth-box {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 40px 30px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  transition: all 0.4s ease;
+}
+
+.auth-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 14px 45px rgba(0, 0, 0, 0.45);
+}
+
+.auth-box h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #d8e2ff;
+  margin-bottom: 25px;
+}
+
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  outline: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid transparent;
+  transition: 0.3s ease;
+}
+
+.input-group input::placeholder {
+  color: #d3dbf7;
+}
+
+.input-group input:focus {
+  border: 1px solid #4facfe;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 10px rgba(79, 172, 254, 0.4);
+}
+
+.btn-auth {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+  margin-top: 10px;
+}
+
+.btn-auth:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(79, 172, 254, 0.35);
+}
+
+.switch-page {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  color: #d8e2ff;
+}
+
+.switch-page a {
+  color: #4facfe;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.switch-page a:hover {
+  text-decoration: underline;
+}
+
+/* ANIMAÇÃO */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease;
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* RESPONSIVO */
+@media (max-width: 480px) {
+  .auth-box {
+    padding: 30px 20px;
+  }
+
+  .auth-box h2 {
+    font-size: 1.6rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro | EvolveGlobal</title>
+  <link rel="stylesheet" href="login-cadastro.css">
+</head>
+<body>
+
+  <div class="auth-container">
+    <div class="auth-box reveal">
+      <h2>Crie sua conta</h2>
+      <p class="subtitle">Cadastre-se para acessar a EvolveGlobal</p>
+
+      <form id="cadastroForm">
+        <div class="input-group">
+          <input type="text" id="nome" placeholder="Digite seu nome completo" required>
+        </div>
+
+        <div class="input-group">
+          <input type="email" id="email" placeholder="Digite seu e-mail" required>
+        </div>
+
+        <div class="input-group">
+          <input type="password" id="senha" placeholder="Crie uma senha" required>
+        </div>
+
+        <button type="submit" class="btn-auth">Cadastrar</button>
+      </form>
+
+      <p class="switch-page">
+        Já tem conta? <a href="login.html">Fazer login</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>
