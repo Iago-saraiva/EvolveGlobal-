@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code Studio Ultra</title>
+  <link rel="stylesheet" href="/evolve_website/projeto2/src/css/editor.css" />
+</head>
+<body>
+
+  <div class="app">
+    <!-- TOPO -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="mobileSidebarBtn" class="icon-btn mobile-only">☰</button>
+
+        <div class="logo-area">
+          <div class="logo-box">{"</>"}</div>
+          <div>
+            <h1>Code Studio Ultra</h1>
+            <p>Mini VS Code no navegador</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="newProjectBtn">+ Novo Projeto</button>
+        <button id="renameProjectBtn">✏ Renomear</button>
+        <button id="deleteProjectBtn" class="danger-btn">🗑 Excluir</button>
+        <button id="runBtn" class="primary-btn">▶ Executar</button>
+      </div>
+    </header>
+
+    <!-- LAYOUT -->
+    <main class="workspace">
+      <!-- OVERLAY MOBILE -->
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- SIDEBAR -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">Projetos</div>
+          <button id="closeSidebarBtn" class="icon-btn mobile-only">✕</button>
+        </div>
+
+        <div id="projectList" class="project-list"></div>
+      </aside>
+
+      <!-- PAINEL CENTRAL -->
+      <section class="center-panel">
+        <!-- BARRA DO PROJETO -->
+        <div class="project-toolbar">
+          <div class="project-info">
+            <span class="project-label">Projeto atual:</span>
+            <strong id="projectNameDisplay">Meu Projeto</strong>
+          </div>
+
+          <div class="editor-actions">
+            <button id="copyBtn">📋 Copiar aba atual</button>
+            <button id="clearBtn">🧹 Limpar aba atual</button>
+            <button id="resetBtn">♻ Restaurar padrão</button>
+          </div>
+        </div>
+
+        <!-- ABAS -->
+        <div class="tabs">
+          <button class="tab active" data-file="html">index.html</button>
+          <button class="tab" data-file="css">style.css</button>
+          <button class="tab" data-file="js">script.js</button>
+        </div>
+
+        <!-- EDITOR -->
+        <div id="editor" class="editor"></div>
+      </section>
+
+      <!-- PREVIEW -->
+      <section class="preview-panel">
+        <div class="preview-header">
+          <span>Preview ao vivo</span>
+          <div class="preview-actions">
+            <button id="refreshPreviewBtn">🔄 Atualizar</button>
+          </div>
+        </div>
+
+        <iframe id="previewFrame" title="Preview do projeto"></iframe>
+      </section>
+    </main>
+  </div>
+
+  <!-- Monaco Editor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <script src="/evolve_website/projeto2/src/js/editor.js"></script>
+</body>
+</html>
