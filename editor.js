@@ -45,8 +45,8 @@ const defaultFiles = {
 </head>
 <body>
   <div class="container">
-    <h1>Olá, mundo! 🚀</h1>
-    <p>Seu mini VS Code está funcionando.</p>
+    <h1>Hello World! 🚀</h1>
+    <p>Começe a treinar</p>
 
     <button onclick="mudarTexto()">Clique aqui</button>
     <p id="texto">Texto inicial</p>

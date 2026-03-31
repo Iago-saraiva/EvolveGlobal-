@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EvolveGlobal | Estudos</title>
+  <link rel="stylesheet" href="estudo.css" />
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <h2>Meus estudos <br> <span>EV-Global</span></h2>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-btn active" data-tab="dashboard">🏠 Dashboard</button>
+        <button class="menu-btn" data-tab="pomodoro">⏳ Pomodoro</button>
+        <button class="menu-btn" data-tab="checklist">✅ Checklist</button>
+        <button class="menu-btn" data-tab="notes">📝 Anotações</button>
+        <button class="menu-btn" data-tab="goals">🎯 Metas</button>
+        <button class="menu-btn" data-tab="materials">📚 Apostilas</button>
+        <button class="menu-btn" data-tab="stats">📊 Estatísticas</button>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p class="subtitle">Organize seus estudos com a Evolve Global</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="resetAllBtn" class="danger-btn">Reset</button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section class="tab-content active" id="dashboard">
+        <div class="cards-grid">
+          <div class="card stat-card">
+            <h3>Tempo estudado hoje</h3>
+            <p id="todayStudyTime">0 min</p>
+          </div>
+
+          <div class="card stat-card">
+            <h3>Tarefas concluídas</h3>
+            <p id="completedTasksCount">0</p>
+          </div>
+
+          <div class="card stat-card">
+            <h3>Metas concluídas</h3>
+            <p id="completedGoalsCount">0</p>
+          </div>
+
+          <div class="card stat-card">
+            <h3>Apostilas salvas</h3>
+            <p id="materialsCount">0</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <h3>Progresso do Dia</h3>
+            <div class="progress-wrapper">
+              <div class="progress-bar">
+                <div id="dailyProgressBar" class="progress-fill"></div>
+              </div>
+              <p id="dailyProgressText">0%</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Resumo Rápido</h3>
+            <ul class="summary-list">
+              <li><strong>Tarefas pendentes:</strong> <span id="pendingTasksCount">0</span></li>
+              <li><strong>Anotações salvas:</strong> <span id="notesCount">0</span></li>
+              <li><strong>Sessões Pomodoro:</strong> <span id="pomodoroSessionsCount">0</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- POMODORO -->
+      <section class="tab-content" id="pomodoro">
+        <div class="card">
+          <h2>Timer de estudos</h2>
+          <p class="section-subtitle">Foco e progresso</p>
+
+          <div class="pomodoro-controls-top">
+            <label>Foco (min):
+              <input type="number" id="focusMinutes" min="1" value="25">
+            </label>
+            <label>Pausa (min):
+              <input type="number" id="breakMinutes" min="1" value="5">
+            </label>
+          </div>
+
+          <div class="pomodoro-timer" id="timerDisplay">25:00</div>
+
+          <div class="pomodoro-buttons">
+            <button id="startTimerBtn">Iniciar</button>
+            <button id="pauseTimerBtn">Pausar</button>
+            <button id="resetTimerBtn">Resetar</button>
+          </div>
+
+          <div class="pomodoro-info">
+            <p><strong>Modo:</strong> <span id="timerMode">Foco</span></p>
+            <p><strong>Sessões concluídas:</strong> <span id="sessionCount">0</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHECKLIST -->
+      <section class="tab-content" id="checklist">
+        <div class="card">
+          <h2>Checklist de Estudos</h2>
+          <div class="input-row">
+            <input type="text" id="taskInput" placeholder="Digite uma tarefa..." />
+            <select id="taskSubject">
+              <option value="Geral">Geral</option>
+              <option value="HTML">HTML</option>
+              <option value="CSS">CSS</option>
+              <option value="JavaScript">JavaScript</option>
+              <option value="Python">Python</option>
+              <option value="Banco de Dados">Banco de Dados</option>
+            </select>
+            <button id="addTaskBtn">Adicionar</button>
+          </div>
+
+          <div class="filter-row">
+            <label>Filtrar:
+              <select id="filterSubject">
+                <option value="Todos">Todos</option>
+                <option value="Geral">Geral</option>
+                <option value="HTML">HTML</option>
+                <option value="CSS">CSS</option>
+                <option value="JavaScript">JavaScript</option>
+                <option value="Python">Python</option>
+                <option value="Banco de Dados">Banco de Dados</option>
+              </select>
+            </label>
+          </div>
+
+          <ul id="taskList" class="list"></ul>
+        </div>
+      </section>
+
+      <!-- NOTES -->
+      <section class="tab-content" id="notes">
+        <div class="card">
+          <h2>Anotações</h2>
+          <textarea id="notesArea" placeholder="Escreva suas anotações aqui..."></textarea>
+          <button id="saveNotesBtn">Salvar Minhas Anotações</button>
+        </div>
+      </section>
+
+      <!-- GOALS -->
+      <section class="tab-content" id="goals">
+        <div class="card">
+          <h2>Metas Diárias</h2>
+          <div class="input-row">
+            <input type="text" id="goalInput" placeholder="Digite uma meta..." />
+            <button id="addGoalBtn">Adicionar Meta</button>
+          </div>
+          <ul id="goalList" class="list"></ul>
+        </div>
+      </section>
+
+      <!-- MATERIALS -->
+      <section class="tab-content" id="materials">
+        <div class="card">
+          <h2>Minhas Apostilas / Materiais</h2>
+          <div class="input-row">
+            <input type="text" id="materialName" placeholder="Nome da apostila..." />
+            <input type="url" id="materialLink" placeholder="Link do material (https://...)" />
+            <button id="addMaterialBtn">Adicionar</button>
+          </div>
+
+          <ul id="materialsList" class="list"></ul>
+        </div>
+      </section>
+
+      <!-- STATS -->
+      <section class="tab-content" id="stats">
+        <div class="card">
+          <h2>Estatísticas</h2>
+          <div class="stats-grid">
+            <div class="mini-stat">
+              <h4>Total de tarefas</h4>
+              <p id="totalTasksStat">0</p>
+            </div>
+            <div class="mini-stat">
+              <h4>Total de metas</h4>
+              <p id="totalGoalsStat">0</p>
+            </div>
+            <div class="mini-stat">
+              <h4>Total de sessões</h4>
+              <p id="totalSessionsStat">0</p>
+            </div>
+            <div class="mini-stat">
+              <h4>Total de materiais</h4>
+              <p id="totalMaterialsStat">0</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="estudo.js"></script>
+</body>
+</html>
