@@ -1,7 +1,3 @@
-// ===============================
-// STUDYHUB V7 GOD MODE
-// ===============================
-
 // ---------- ELEMENTOS ----------
 const menuButtons = document.querySelectorAll(".menu-btn");
 const tabContents = document.querySelectorAll(".tab-content");
@@ -67,6 +63,21 @@ let stats = JSON.parse(localStorage.getItem("studyhub_stats")) || {
   pomodoroSessions: 0
 };
 
+// ---------- VERIFICA SE O USUÁRIO ESTÁ LOGADO ----------
+(function checkLogin() {
+  const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
+  const logadoIndex = localStorage.getItem("logado");
+
+  if (logadoIndex !== "true") {
+    alert("Você precisa fazer login primeiro!");
+    window.location.href = "login.html";
+    return false;
+  }
+
+  exibirInfoUsuario(usuarioSalvo);
+
+  return true;
+})();
 // ---------- NAVEGAÇÃO ----------
 menuButtons.forEach(button => {
   button.addEventListener("click", () => {
