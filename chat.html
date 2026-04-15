@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatBot Inteligente - Google Gemini AI</title>
-    
-    <!-- CSS do Widget Rasa Chatbot -->
-    <link rel="stylesheet" href="https://unpkg.com/@rasahq/chat-widget-ui/dist/rasa-chatwidget/rasa-chatwidget.css">
-    
-    <!-- Script do Widget Rasa Chatbot -->
-    <script type="module" src="https://unpkg.com/@rasahq/chat-widget-ui/dist/rasa-chatwidget/rasa-chatwidget.esm.js"></script>
-    
+    <title>ChatBot Gemini AI - Assistente Inteligente</title>
+
     <style>
         * {
             margin: 0;
@@ -30,12 +25,12 @@
 
         .chat-container {
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             height: 90vh;
             max-height: 700px;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -135,7 +130,7 @@
             background: white;
             color: #333;
             border-bottom-left-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .typing-indicator {
@@ -176,14 +171,14 @@
             padding: 14px 20px;
             background: #f7f8fc;
             border-bottom: 1px solid #e0e0e0;
-            display: grid;
-            grid-template-columns: 1fr auto;
+            display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .api-key-input {
-            width: 100%;
+            flex: 1;
             padding: 12px 16px;
             border: 1px solid #cfd8e3;
             border-radius: 25px;
@@ -208,7 +203,7 @@
         }
 
         .api-status {
-            grid-column: 1 / -1;
+            width: 100%;
             color: #555;
             font-size: 0.82rem;
             text-align: center;
@@ -276,116 +271,54 @@
             background: #d32f2f;
         }
 
-        .suggestions {
-            padding: 10px 20px;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-        }
-
-        .suggestion-btn {
-            background: #f0f0f0;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            transition: all 0.3s;
-        }
-
-        .suggestion-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
-        
-        rasa-chatbot-widget {
-            --chat-widget-z-index: 1000;
-        }
-        
         @media (max-width: 768px) {
             .chat-container {
                 width: 95%;
                 height: 95vh;
             }
-            
             .message-content {
                 max-width: 85%;
-            }
-            
-            .suggestions {
-                display: none;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h2>🤖 Assistente Virtual - Gemini AI</h2>
-            <p>Como posso ajudar você hoje?</p>
+            <h2>🤖 Assistente Gemini AI</h2>
+            <p>Powered by Google Gemini 2.5 Flash Lite</p>
             <div class="status">Online</div>
         </div>
-        
+
         <div class="api-key-panel">
-            <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Chave da API Google Gemini" autocomplete="off">
+            <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Chave da API Google Gemini"
+                autocomplete="off">
             <button class="save-api-button" id="saveApiKeyButton">Salvar chave</button>
-            <div class="api-status" id="apiStatus">⚠️ Insira sua chave da API Gemini para usar IA</div>
+            <div class="api-status" id="apiStatus">⚠️ Insira sua chave da API Gemini para começar</div>
         </div>
 
         <div class="chat-messages" id="chatMessages">
             <div class="message bot">
                 <div class="message-content">
-                    Olá! 👋 Sou seu assistente virtual com Google Gemini AI.<br>
-                    Posso ajudar com informações, piadas, conselhos e muito mais!<br><br>
-                    💡 <strong>Comandos disponíveis:</strong><br>
-                    • "ajuda" - Ver todos os comandos<br>
-                    • "piada" - Contar uma piada<br>
-                    • "conselho" - Dar um conselho<br>
-                    • "fato" - Curiosidade interessante<br>
-                    • "horas" - Horário atual<br>
-                    • "data" - Data de hoje<br><br>
-                    🔑 <strong>Primeiro passo:</strong> Obtenha sua chave gratuita em<br>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#667eea;">Google AI Studio</a>
+                    Olá! 👋 Sou o Assistente Gemini AI.<br><br>
+                    Para começar, você precisa de uma chave de API gratuita:<br>
+                    🔑 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#667eea;">Clique
+                        aqui para obter sua chave</a><br><br>
+                    Depois de obter a chave, cole acima e clique em "Salvar chave".
                 </div>
             </div>
         </div>
-        
-        <div class="suggestions" id="suggestions">
-            <button class="suggestion-btn" data-msg="ajuda">💡 Ajuda</button>
-            <button class="suggestion-btn" data-msg="piada">😄 Piada</button>
-            <button class="suggestion-btn" data-msg="conselho">💭 Conselho</button>
-            <button class="suggestion-btn" data-msg="fato">📊 Fato</button>
-            <button class="suggestion-btn" data-msg="horas">⏰ Horas</button>
-            <button class="suggestion-btn" data-msg="data">📅 Data</button>
-        </div>
-        
+
         <div class="chat-input-container">
-            <textarea class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." rows="1" autocomplete="off"></textarea>
+            <textarea class="chat-input" id="messageInput" placeholder="Digite sua mensagem..." rows="1"
+                autocomplete="off"></textarea>
             <button class="send-button" id="sendButton">Enviar</button>
             <button class="clear-button" id="clearButton">Limpar</button>
         </div>
     </div>
-    
-    <rasa-chatbot-widget 
-        server-url="http://localhost:5005"
-        title="Assistente Rasa"
-        subtitle="Como posso ajudar?"
-        conversation-title="Conversa"
-        input-placeholder="Digite sua mensagem..."
-        show-notification-badge="true"
-        notification-badge-color="#ef4444"
-        bot-avatar="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
-        user-avatar="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-        primary-color="#667eea"
-        response-time="1000"
-    ></rasa-chatbot-widget>
 
     <script>
-        // ChatBot Class - Versão com API direta (sem SDK)
         class ChatBot {
             constructor() {
                 this.messagesContainer = document.getElementById('chatMessages');
@@ -395,300 +328,252 @@
                 this.saveApiKeyButton = document.getElementById('saveApiKeyButton');
                 this.apiKeyInput = document.getElementById('apiKeyInput');
                 this.apiStatus = document.getElementById('apiStatus');
-                
-                this.userName = null;
-                this.conversationContext = [];
+
+                this.conversationHistory = [];
                 this.isTyping = false;
                 this.apiKey = '';
-                
-                // Respostas pré-definidas
-                this.responses = {
-                    'olá': 'Olá! Como posso ajudar você hoje?',
-                    'oi': 'Oi! Tudo bem? Em que posso ajudar?',
-                    'bom dia': 'Bom dia! 🌞 Como posso ajudá-lo hoje?',
-                    'boa tarde': 'Boa tarde! 🌤️ Como posso ajudar?',
-                    'boa noite': 'Boa noite! 🌙 Como posso ajudar?',
-                    'tudo bem': 'Tudo ótimo por aqui! E com você?',
-                    'como você está': 'Estou muito bem, obrigado! Sempre pronto para ajudar!',
-                    'obrigado': 'Por nada! Fico feliz em ajudar! 😊',
-                    'obrigada': 'Por nada! Fico feliz em ajudar! 😊',
-                    'ajuda': this.showHelp.bind(this),
-                    'comandos': this.showHelp.bind(this),
-                    'piada': this.tellJoke.bind(this),
-                    'conselho': this.giveAdvice.bind(this),
-                    'fato': this.giveFact.bind(this),
-                    'horas': this.getCurrentTime.bind(this),
-                    'data': this.getCurrentDate.bind(this),
-                    'soma': this.calculateSum.bind(this),
-                    'tchau': 'Até mais! Foi um prazer conversar com você. 👋',
-                    'default': this.handleDefault.bind(this)
-                };
-                
+                this.lastMessageTime = 0;
+                this.waitTime = 0;
+                this.waitInterval = null;
+                this.workingModel = null;
+
                 this.init();
             }
-            
+
             init() {
-                // Carregar chave salva
+               
                 const savedKey = localStorage.getItem('geminiApiKey');
                 if (savedKey) {
                     this.apiKey = savedKey;
                     this.apiKeyInput.value = '***************';
-                    this.apiStatus.textContent = '✅ Google Gemini AI conectado!';
+                    this.apiStatus.textContent = '✅ Gemini AI conectado! Pronto para conversar.';
                     this.apiStatus.style.color = '#4caf50';
                 }
 
-                // Event listeners
                 this.sendButton.onclick = () => this.sendMessage();
                 this.clearButton.onclick = () => this.clearChat();
                 this.saveApiKeyButton.onclick = () => this.saveApiKey();
-                
+
                 this.messageInput.onkeypress = (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
                 };
-                
+
                 this.messageInput.oninput = () => {
                     this.messageInput.style.height = 'auto';
                     this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 100) + 'px';
                 };
-                
-                // Botões de sugestão
-                document.querySelectorAll('.suggestion-btn').forEach(btn => {
-                    btn.onclick = () => {
-                        const msg = btn.getAttribute('data-msg');
-                        this.messageInput.value = msg;
-                        this.sendMessage();
-                    };
-                });
             }
-            
+
             async sendMessage() {
                 const message = this.messageInput.value.trim();
-                if (!message || this.isTyping) return;
+
+                if (!message) return;
+                if (!this.apiKey) {
+                    this.addMessage("⚠️ Por favor, configure sua chave da API Gemini primeiro.", 'bot');
+                    return;
+                }
+                if (this.isTyping) return;
+
+               
+                if (this.waitTime > 0) {
+                    this.addMessage(`⏳ Aguarde ${this.waitTime} segundos antes de enviar outra mensagem.`, 'bot');
+                    return;
+                }
+
+               
+                const now = Date.now();
+                const timeSinceLastMessage = (now - this.lastMessageTime) / 1000;
                 
+                if (this.lastMessageTime > 0 && timeSinceLastMessage < 15) {
+                    const remainingWait = Math.ceil(15 - timeSinceLastMessage);
+                    this.addMessage(`⏳ Por favor, aguarde ${remainingWait} segundos entre as mensagens.`, 'bot');
+                    return;
+                }
+
                 this.addMessage(message, 'user');
                 this.messageInput.value = '';
                 this.messageInput.style.height = 'auto';
-                
-                this.conversationContext.push({ role: 'user', text: message });
-                
+
+                this.conversationHistory.push({ role: "user", parts: [{ text: message }] });
+
                 this.showTypingIndicator();
                 this.isTyping = true;
                 this.sendButton.disabled = true;
-                
-                await new Promise(resolve => setTimeout(resolve, 300));
-                this.removeTypingIndicator();
-                await this.processMessage(message);
-                this.isTyping = false;
-                this.sendButton.disabled = false;
-            }
-            
-            async processMessage(message) {
-                let response = null;
 
-                // Tenta usar Gemini AI se tiver chave
-                if (this.apiKey) {
+                try {
+                    const response = await this.askGemini(message);
+                    this.addMessage(response, 'bot');
+                    this.conversationHistory.push({ role: "model", parts: [{ text: response }] });
+                    this.lastMessageTime = Date.now();
+                } catch (error) {
+                    console.error('Erro:', error);
+                    this.addMessage(`❌ Erro: ${error.message}`, 'bot');
+                    
+                    const match = error.message.match(/Please retry in ([0-9.]+)s/);
+                    if (match) {
+                        const waitSeconds = Math.ceil(parseFloat(match[1]));
+                        this.startWaitTimer(waitSeconds);
+                    }
+                } finally {
+                    this.removeTypingIndicator();
+                    this.isTyping = false;
+                    this.sendButton.disabled = false;
+                }
+
+                if (this.conversationHistory.length > 20) {
+                    this.conversationHistory = this.conversationHistory.slice(-20);
+                }
+            }
+
+            startWaitTimer(seconds) {
+                this.waitTime = seconds;
+                this.sendButton.disabled = true;
+                
+                this.addMessage(`⏳ API sobrecarregada. Aguardando ${seconds} segundos para nova tentativa...`, 'bot');
+                
+                this.waitInterval = setInterval(() => {
+                    this.waitTime--;
+                    
+                    if (this.waitTime <= 0) {
+                        clearInterval(this.waitInterval);
+                        this.waitInterval = null;
+                        this.sendButton.disabled = false;
+                        this.addMessage(`✅ Período de espera concluído! Você já pode enviar novas mensagens.`, 'bot');
+                    }
+                }, 1000);
+            }
+
+            async askGemini(message, retryCount = 0) {
+                
+                const modelsToTry = this.workingModel 
+                    ? [this.workingModel] 
+                    : [
+                        'gemini-2.5-flash-lite',
+                        'gemini-2.5-flash',
+                        'gemini-2.0-flash-lite'
+                      ];
+                
+                let lastError = null;
+                
+                for (const model of modelsToTry) {
                     try {
-                        response = await this.askGemini(message);
-                    } catch (error) {
-                        console.error('Erro Gemini:', error);
-                        response = null;
-                    }
-                }
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
 
-                // Fallback para respostas locais
-                if (!response) {
-                    const lowerMessage = message.toLowerCase();
-                    let matched = false;
+                        const contents = this.conversationHistory.length > 0
+                            ? this.conversationHistory
+                            : [{ role: "user", parts: [{ text: message }] }];
 
-                    if (lowerMessage.includes('meu nome é') || lowerMessage.includes('me chamo')) {
-                        const nameMatch = message.match(/(?:meu nome é|me chamo)\s+(\w+)/i);
-                        if (nameMatch) {
-                            this.userName = nameMatch[1];
-                            response = `Prazer em conhecer você, ${this.userName}! Como posso ajudar?`;
-                            matched = true;
-                        }
-                    }
-
-                    if (!matched && (lowerMessage.includes('soma') || lowerMessage.includes('mais'))) {
-                        response = this.calculateSum(message);
-                        matched = true;
-                    }
-
-                    if (!matched) {
-                        for (let [key, value] of Object.entries(this.responses)) {
-                            if (lowerMessage.includes(key)) {
-                                response = typeof value === 'function' ? value(message) : value;
-                                matched = true;
-                                break;
+                        const requestBody = {
+                            contents: contents,
+                            generationConfig: {
+                                temperature: 0.7,
+                                maxOutputTokens: 800,
+                                topP: 0.95,
                             }
+                        };
+
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (text) {
+                                if (!this.workingModel) {
+                                    this.workingModel = model;
+                                    console.log(`✅ Modelo funcionando: ${model}`);
+                                }
+                                return text;
+                            }
+                        } else if (response.status === 429) {
+                            const errorMsg = data.error?.message || '';
+                            const match = errorMsg.match(/Please retry in ([0-9.]+)s/);
+                            if (match && retryCount === 0) {
+                                const waitSeconds = parseFloat(match[1]);
+                                this.startWaitTimer(Math.ceil(waitSeconds));
+                                throw new Error(errorMsg);
+                            }
+                            lastError = errorMsg;
+                        } else {
+                            lastError = data.error?.message || 'Erro desconhecido';
+                            console.log(`❌ Modelo ${model} falhou: ${lastError}`);
                         }
-                    }
-
-                    if (!matched) {
-                        response = this.responses.default(message);
+                    } catch (error) {
+                        lastError = error.message;
                     }
                 }
-
-                this.addMessage(response, 'bot');
-                this.conversationContext.push({ role: 'bot', text: response });
-
-                if (this.conversationContext.length > 20) {
-                    this.conversationContext = this.conversationContext.slice(-20);
-                }
-            }
-
-            async askGemini(message) {
-                if (!this.apiKey) {
-                    throw new Error('API key não configurada');
-                }
-
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
                 
-                const requestBody = {
-                    contents: [{
-                        parts: [{
-                            text: `Responda em português brasileiro de forma amigável e útil. Seja educado e prestativo. Pergunta: ${message}`
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.9,
-                        maxOutputTokens: 500,
-                    }
-                };
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error?.message || 'Erro na API Gemini');
-                }
-                
-                const data = await response.json();
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                
-                return text || "Desculpe, não consegui gerar uma resposta.";
-            }
-            
-            showHelp() {
-                return `📚 *Comandos Disponíveis*\n\n` +
-                       `💬 "olá", "oi", "bom dia", "boa tarde", "boa noite"\n\n` +
-                       `🎯 "piada", "conselho", "fato", "horas", "data"\n` +
-                       `🧮 "soma 5 e 3"\n` +
-                       `👤 "meu nome é [nome]"\n\n` +
-                       `🤖 *Gemini AI*: Quando conectado, respondo perguntas complexas!`;
-            }
-            
-            tellJoke() {
-                const jokes = [
-                    "Por que o livro de matemática ficou triste? Porque tinha muitos problemas! 😄",
-                    "O que o tomate foi fazer no banco? Tirar extrato! 🍅",
-                    "Por que o computador foi ao médico? Porque estava com vírus! 💻",
-                    "Qual é o café mais perigoso do mundo? O café com leite! ☕",
-                    "O que o zero disse para o oito? Belo cinto! 0️⃣",
-                    "Por que a vaca foi para o espaço? Para ver o vácuo! 🐮"
-                ];
-                return `😄 ${jokes[Math.floor(Math.random() * jokes.length)]}`;
-            }
-            
-            giveAdvice() {
-                const advices = [
-                    "💭 Lembre-se: cada dia é uma nova oportunidade para ser feliz!",
-                    "💭 Acredite em si mesmo e tudo será possível!",
-                    "💭 Não compare sua vida com a dos outros. Cada um tem seu tempo!",
-                    "💭 Pequenos passos todos os dias levam a grandes conquistas!"
-                ];
-                return advices[Math.floor(Math.random() * advices.length)];
-            }
-            
-            giveFact() {
-                const facts = [
-                    "📊 Os ursos polares têm a pele preta embaixo do pelo branco!",
-                    "📊 O coração de um camarão está localizado em sua cabeça!",
-                    "📊 As girafas têm o mesmo número de vértebras no pescoço que os humanos (7)!",
-                    "📊 O olho do avestruz é maior que seu cérebro!"
-                ];
-                return `🔍 ${facts[Math.floor(Math.random() * facts.length)]}`;
-            }
-            
-            getCurrentTime() {
-                const now = new Date();
-                return `⏰ Agora são ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            }
-            
-            getCurrentDate() {
-                const now = new Date();
-                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                return `📅 Hoje é ${now.toLocaleDateString('pt-BR', options)}`;
-            }
-            
-            calculateSum(message) {
-                const numbers = message.match(/\d+/g);
-                if (numbers && numbers.length >= 2) {
-                    return `🧮 A soma é ${numbers.reduce((a, b) => parseInt(a) + parseInt(b), 0)}`;
-                }
-                return "Por favor, diga dois números para somar. Exemplo: 'soma 5 e 3'";
-            }
-            
-            handleDefault(message) {
-                const defaultResponses = [
-                    `Interessante! Me conte mais sobre "${message}".`,
-                    "Entendo. Como posso ajudar com isso?",
-                    "Que tal tentar 'ajuda' para ver os comandos disponíveis?",
-                    "Hmm, não tenho uma resposta pronta para isso. Que tal uma piada?"
-                ];
-                
-                if (this.userName && message.toLowerCase().includes(this.userName.toLowerCase())) {
-                    return `Sim, ${this.userName}! Como posso ajudar você?`;
-                }
-                
-                return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+                throw new Error(lastError || 'Nenhum modelo disponível. Verifique sua chave API.');
             }
 
             saveApiKey() {
                 const key = this.apiKeyInput.value.trim();
+
                 if (!key) {
                     localStorage.removeItem('geminiApiKey');
                     this.apiKey = '';
-                    this.apiStatus.textContent = '⚠️ Chave removida. Usando respostas locais.';
+                    this.workingModel = null;
+                    this.apiStatus.textContent = '⚠️ Chave removida. Insira uma nova chave para continuar.';
                     this.apiStatus.style.color = '#ff9800';
                     this.apiKeyInput.value = '';
                     return;
                 }
-                
-                // Validar formato básico da chave
+
                 if (!key.startsWith('AIza')) {
                     this.apiStatus.textContent = '❌ Chave inválida! A chave Gemini deve começar com "AIza"';
                     this.apiStatus.style.color = '#f44336';
                     return;
                 }
-                
+
                 localStorage.setItem('geminiApiKey', key);
                 this.apiKey = key;
-                this.apiStatus.textContent = '✅ Google Gemini AI conectado com sucesso!';
-                this.apiStatus.style.color = '#4caf50';
+                this.workingModel = null;
+                this.apiStatus.textContent = '✅ Chave salva! Testando conexão...';
+                this.apiStatus.style.color = '#ff9800';
                 this.apiKeyInput.value = '***************';
+
+                // Testar conexão
+                this.testConnection();
             }
-            
+
+            async testConnection() {
+                try {
+                    const testResponse = await this.askGemini("Responda apenas 'Conectado' se você receber esta mensagem.");
+                    this.apiStatus.textContent = '✅ Gemini AI conectado com sucesso!';
+                    this.apiStatus.style.color = '#4caf50';
+                    this.addMessage(`✅ Conexão estabelecida com sucesso! Uso atual: ${this.workingModel || 'Gemini 2.5 Flash Lite'}\n\nComo posso ajudar você hoje? 😊`, 'bot');
+                } catch (error) {
+                    this.apiStatus.textContent = `❌ Erro de conexão: ${error.message.substring(0, 80)}`;
+                    this.apiStatus.style.color = '#f44336';
+                    this.addMessage(`❌ Falha na conexão: ${error.message}\n\nVerifique se sua chave está correta e tente novamente.`, 'bot');
+                }
+            }
+
             addMessage(text, sender) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${sender}`;
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
-                contentDiv.innerHTML = text.replace(/\n/g, '<br>').replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+                let formattedText = text.replace(/\n/g, '<br>');
+                formattedText = formattedText.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#667eea;">$1</a>');
+                contentDiv.innerHTML = formattedText;
+
                 messageDiv.appendChild(contentDiv);
                 this.messagesContainer.appendChild(messageDiv);
                 this.scrollToBottom();
+                return messageDiv;
             }
-            
+
             showTypingIndicator() {
                 const typingDiv = document.createElement('div');
                 typingDiv.className = 'message bot';
@@ -700,28 +585,46 @@
                 this.messagesContainer.appendChild(typingDiv);
                 this.scrollToBottom();
             }
-            
+
             removeTypingIndicator() {
                 const indicator = document.getElementById('typingIndicator');
                 if (indicator) indicator.remove();
             }
-            
+
             clearChat() {
                 this.messagesContainer.innerHTML = '';
-                this.conversationContext = [];
-                this.addMessage("💬 Chat limpo! Como posso ajudar você hoje?", 'bot');
-                this.userName = null;
+                this.conversationHistory = [];
+                this.lastMessageTime = 0;
+                
+                if (this.waitInterval) {
+                    clearInterval(this.waitInterval);
+                    this.waitInterval = null;
+                    this.waitTime = 0;
+                    this.sendButton.disabled = false;
+                }
+
+                const initialMessage = document.createElement('div');
+                initialMessage.className = 'message bot';
+                initialMessage.innerHTML = `
+                    <div class="message-content">
+                        💬 Chat limpo! Como posso ajudar você hoje?<br><br>
+                        🧠 Gemini AI - Modelo ativo: ${this.workingModel || 'Gemini 2.5 Flash Lite'}<br>
+                        ⏰ Aguarde 15 segundos entre cada mensagem.
+                    </div>
+                `;
+                this.messagesContainer.appendChild(initialMessage);
+                this.scrollToBottom();
             }
-            
+
             scrollToBottom() {
                 this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
             }
         }
-        
-        // Inicializar quando a página carregar
+
         window.addEventListener('DOMContentLoaded', () => {
             window.chatBot = new ChatBot();
         });
     </script>
 </body>
+
 </html>
