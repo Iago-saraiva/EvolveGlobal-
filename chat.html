@@ -178,6 +178,7 @@
         }
 
         .api-key-input {
+            display: none !important;
             flex: 1;
             padding: 12px 16px;
             border: 1px solid #cfd8e3;
@@ -188,6 +189,7 @@
         }
 
         .save-api-button {
+            display: none !important;
             background: #667eea;
             color: white;
             border: none;
@@ -295,7 +297,7 @@
             <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Chave da API Google Gemini"
                 autocomplete="off">
             <button class="save-api-button" id="saveApiKeyButton">Salvar chave</button>
-            <div class="api-status" id="apiStatus">⚠️ Insira sua chave da API Gemini para começar</div>
+            <div class="api-status" id="apiStatus">✅ API pré-configurada! Pronto para usar.</div>
         </div>
 
         <div class="chat-messages" id="chatMessages">
@@ -316,6 +318,10 @@
     </div>
 
     <script>
+        // CHAVE API DO GMEINI AI
+        const DEFAULT_API_KEY = "AIzaSyCfd-GXQcvr7T-waJh6WOqi3jAxLMTH2Qk";
+        
+        
         class ChatBot {
             constructor() {
                 this.messagesContainer = document.getElementById('chatMessages');
@@ -338,13 +344,26 @@
             }
 
             init() {
-               
-                const savedKey = localStorage.getItem('geminiApiKey');
+                // Tentar carregar chave salva primeiro
+                let savedKey = localStorage.getItem('geminiApiKey');
+                
+                // Se não tiver chave salva, usar a chave padrão (se configurada)
+                if (!savedKey && DEFAULT_API_KEY && DEFAULT_API_KEY !== "AIzaSyCfd-GXQcvr7T-waJh6WOqi3jAxLMTH2Qk") {
+                    savedKey = DEFAULT_API_KEY;
+                    localStorage.setItem('geminiApiKey', savedKey);
+                }
+                
                 if (savedKey) {
                     this.apiKey = savedKey;
                     this.apiKeyInput.value = '***************';
                     this.apiStatus.textContent = '✅ Gemini AI conectado! Pronto para conversar.';
                     this.apiStatus.style.color = '#4caf50';
+                    
+                    // Testar conexão automaticamente
+                    setTimeout(() => this.testConnection(), 500);
+                } else {
+                    this.apiStatus.textContent = '⚠️ Configure sua chave API ou edite o código com a chave padrão.';
+                    this.apiStatus.style.color = '#ff9800';
                 }
 
                 this.sendButton.onclick = () => this.sendMessage();
@@ -369,18 +388,16 @@
 
                 if (!message) return;
                 if (!this.apiKey) {
-                    this.addMessage("⚠️ Por favor, configure sua chave da API Gemini primeiro.", 'bot');
+                    this.addMessage("⚠️ Por favor, configure sua chave da API Gemini primeiro.\n\n🔑 Obtenha uma chave gratuita em: https://aistudio.google.com/app/apikey", 'bot');
                     return;
                 }
                 if (this.isTyping) return;
 
-               
                 if (this.waitTime > 0) {
                     this.addMessage(`⏳ Aguarde ${this.waitTime} segundos antes de enviar outra mensagem.`, 'bot');
                     return;
                 }
 
-               
                 const now = Date.now();
                 const timeSinceLastMessage = (now - this.lastMessageTime) / 1000;
                 
@@ -407,7 +424,18 @@
                     this.lastMessageTime = Date.now();
                 } catch (error) {
                     console.error('Erro:', error);
-                    this.addMessage(`❌ Erro: ${error.message}`, 'bot');
+                    
+                    // Mensagem de erro mais amigável
+                    let errorMsg = error.message;
+                    if (errorMsg.includes('API key not valid') || errorMsg.includes('invalid')) {
+                        errorMsg = 'Chave API inválida. Verifique sua chave no Google AI Studio.';
+                        this.apiStatus.textContent = '❌ Chave inválida! Corrija no campo acima.';
+                        this.apiStatus.style.color = '#f44336';
+                    } else if (errorMsg.includes('quota')) {
+                        errorMsg = 'Limite de uso gratuito excedido. Aguarde alguns minutos ou tente uma nova chave.';
+                    }
+                    
+                    this.addMessage(`❌ ${errorMsg}`, 'bot');
                     
                     const match = error.message.match(/Please retry in ([0-9.]+)s/);
                     if (match) {
@@ -444,7 +472,6 @@
             }
 
             async askGemini(message, retryCount = 0) {
-                
                 const modelsToTry = this.workingModel 
                     ? [this.workingModel] 
                     : [
@@ -538,7 +565,6 @@
                 this.apiStatus.style.color = '#ff9800';
                 this.apiKeyInput.value = '***************';
 
-                // Testar conexão
                 this.testConnection();
             }
 
