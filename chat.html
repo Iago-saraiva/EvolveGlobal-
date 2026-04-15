@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatBot Inteligente - Respostas Automáticas</title>
+    <title>ChatBot Inteligente - Google Gemini AI</title>
+    
+    <!-- CSS do Widget Rasa Chatbot -->
+    <link rel="stylesheet" href="https://unpkg.com/@rasahq/chat-widget-ui/dist/rasa-chatwidget/rasa-chatwidget.css">
+    
+    <!-- Script do Widget Rasa Chatbot -->
+    <script type="module" src="https://unpkg.com/@rasahq/chat-widget-ui/dist/rasa-chatwidget/rasa-chatwidget.esm.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -165,6 +172,49 @@
             }
         }
 
+        .api-key-panel {
+            padding: 14px 20px;
+            background: #f7f8fc;
+            border-bottom: 1px solid #e0e0e0;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #cfd8e3;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .save-api-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 22px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+
+        .save-api-button:hover {
+            background: #5a6dd3;
+        }
+
+        .api-status {
+            grid-column: 1 / -1;
+            color: #555;
+            font-size: 0.82rem;
+            text-align: center;
+            margin-top: 6px;
+        }
+
         .chat-input-container {
             padding: 20px;
             background: white;
@@ -251,7 +301,11 @@
             color: white;
             transform: translateY(-2px);
         }
-
+        
+        rasa-chatbot-widget {
+            --chat-widget-z-index: 1000;
+        }
+        
         @media (max-width: 768px) {
             .chat-container {
                 width: 95%;
@@ -271,15 +325,21 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h2>🤖 Assistente Virtual - Evolve</h2>
+            <h2>🤖 Assistente Virtual - Gemini AI</h2>
             <p>Como posso ajudar você hoje?</p>
             <div class="status">Online</div>
         </div>
         
+        <div class="api-key-panel">
+            <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Chave da API Google Gemini" autocomplete="off">
+            <button class="save-api-button" id="saveApiKeyButton">Salvar chave</button>
+            <div class="api-status" id="apiStatus">⚠️ Insira sua chave da API Gemini para usar IA</div>
+        </div>
+
         <div class="chat-messages" id="chatMessages">
             <div class="message bot">
                 <div class="message-content">
-                    Olá! 👋 Sou seu assistente virtual.<br>
+                    Olá! 👋 Sou seu assistente virtual com Google Gemini AI.<br>
                     Posso ajudar com informações, piadas, conselhos e muito mais!<br><br>
                     💡 <strong>Comandos disponíveis:</strong><br>
                     • "ajuda" - Ver todos os comandos<br>
@@ -287,18 +347,20 @@
                     • "conselho" - Dar um conselho<br>
                     • "fato" - Curiosidade interessante<br>
                     • "horas" - Horário atual<br>
-                    • "data" - Data de hoje
+                    • "data" - Data de hoje<br><br>
+                    🔑 <strong>Primeiro passo:</strong> Obtenha sua chave gratuita em<br>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#667eea;">Google AI Studio</a>
                 </div>
             </div>
         </div>
         
         <div class="suggestions" id="suggestions">
-            <button class="suggestion-btn">💡 Ajuda</button>
-            <button class="suggestion-btn">😄 Piada</button>
-            <button class="suggestion-btn">💭 Conselho</button>
-            <button class="suggestion-btn">📊 Fato</button>
-            <button class="suggestion-btn">⏰ Horas</button>
-            <button class="suggestion-btn">📅 Data</button>
+            <button class="suggestion-btn" data-msg="ajuda">💡 Ajuda</button>
+            <button class="suggestion-btn" data-msg="piada">😄 Piada</button>
+            <button class="suggestion-btn" data-msg="conselho">💭 Conselho</button>
+            <button class="suggestion-btn" data-msg="fato">📊 Fato</button>
+            <button class="suggestion-btn" data-msg="horas">⏰ Horas</button>
+            <button class="suggestion-btn" data-msg="data">📅 Data</button>
         </div>
         
         <div class="chat-input-container">
@@ -307,62 +369,58 @@
             <button class="clear-button" id="clearButton">Limpar</button>
         </div>
     </div>
+    
+    <rasa-chatbot-widget 
+        server-url="http://localhost:5005"
+        title="Assistente Rasa"
+        subtitle="Como posso ajudar?"
+        conversation-title="Conversa"
+        input-placeholder="Digite sua mensagem..."
+        show-notification-badge="true"
+        notification-badge-color="#ef4444"
+        bot-avatar="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
+        user-avatar="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+        primary-color="#667eea"
+        response-time="1000"
+    ></rasa-chatbot-widget>
 
     <script>
+        // ChatBot Class - Versão com API direta (sem SDK)
         class ChatBot {
             constructor() {
                 this.messagesContainer = document.getElementById('chatMessages');
                 this.messageInput = document.getElementById('messageInput');
                 this.sendButton = document.getElementById('sendButton');
                 this.clearButton = document.getElementById('clearButton');
-                this.suggestions = document.querySelectorAll('.suggestion-btn');
+                this.saveApiKeyButton = document.getElementById('saveApiKeyButton');
+                this.apiKeyInput = document.getElementById('apiKeyInput');
+                this.apiStatus = document.getElementById('apiStatus');
                 
                 this.userName = null;
                 this.conversationContext = [];
                 this.isTyping = false;
+                this.apiKey = '';
                 
-                // Respostas pré-definidas para comandos e palavras-chave
+                // Respostas pré-definidas
                 this.responses = {
-                    // Saudações
                     'olá': 'Olá! Como posso ajudar você hoje?',
                     'oi': 'Oi! Tudo bem? Em que posso ajudar?',
                     'bom dia': 'Bom dia! 🌞 Como posso ajudá-lo hoje?',
                     'boa tarde': 'Boa tarde! 🌤️ Como posso ajudar?',
                     'boa noite': 'Boa noite! 🌙 Como posso ajudar?',
-                    
-                    // Estado
                     'tudo bem': 'Tudo ótimo por aqui! E com você?',
                     'como você está': 'Estou muito bem, obrigado! Sempre pronto para ajudar!',
-                    'como vai': 'Vou muito bem! Pronto para conversar!',
-                    
-                    // Agradecimentos
                     'obrigado': 'Por nada! Fico feliz em ajudar! 😊',
                     'obrigada': 'Por nada! Fico feliz em ajudar! 😊',
-                    'valeu': 'Por nada! Estou aqui para ajudar!',
-                    'gratidão': 'Que bom que pude ajudar! 🙏',
-                    
-                    // Comandos principais
                     'ajuda': this.showHelp.bind(this),
                     'comandos': this.showHelp.bind(this),
                     'piada': this.tellJoke.bind(this),
                     'conselho': this.giveAdvice.bind(this),
                     'fato': this.giveFact.bind(this),
-                    'curiosidade': this.giveFact.bind(this),
                     'horas': this.getCurrentTime.bind(this),
-                    'hora': this.getCurrentTime.bind(this),
                     'data': this.getCurrentDate.bind(this),
                     'soma': this.calculateSum.bind(this),
-                    
-                    // Personalização
-                    'nome': 'Que nome legal! Como posso te chamar?',
-                    
-                    // Despedidas
-                    'tchau': 'Até mais! Foi um prazer conversar com você. Volte sempre! 👋',
-                    'adeus': 'Até logo! Tenha um ótimo dia! 🌟',
-                    'até mais': 'Até mais! Se precisar, é só chamar!',
-                    'falou': 'Falou! Até a próxima!',
-                    
-                    // Padrão
+                    'tchau': 'Até mais! Foi um prazer conversar com você. 👋',
                     'default': this.handleDefault.bind(this)
                 };
                 
@@ -370,32 +428,43 @@
             }
             
             init() {
-                this.sendButton.addEventListener('click', () => this.sendMessage());
-                this.clearButton.addEventListener('click', () => this.clearChat());
+                // Carregar chave salva
+                const savedKey = localStorage.getItem('geminiApiKey');
+                if (savedKey) {
+                    this.apiKey = savedKey;
+                    this.apiKeyInput.value = '***************';
+                    this.apiStatus.textContent = '✅ Google Gemini AI conectado!';
+                    this.apiStatus.style.color = '#4caf50';
+                }
+
+                // Event listeners
+                this.sendButton.onclick = () => this.sendMessage();
+                this.clearButton.onclick = () => this.clearChat();
+                this.saveApiKeyButton.onclick = () => this.saveApiKey();
                 
-                this.messageInput.addEventListener('keypress', (e) => {
+                this.messageInput.onkeypress = (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
-                });
+                };
                 
-                // Auto-resize textarea
-                this.messageInput.addEventListener('input', () => {
+                this.messageInput.oninput = () => {
                     this.messageInput.style.height = 'auto';
                     this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 100) + 'px';
-                });
+                };
                 
                 // Botões de sugestão
-                this.suggestions.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        this.messageInput.value = btn.textContent.replace(/[^A-Za-zÀ-ÿ\s]/g, '').trim();
+                document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                    btn.onclick = () => {
+                        const msg = btn.getAttribute('data-msg');
+                        this.messageInput.value = msg;
                         this.sendMessage();
-                    });
+                    };
                 });
             }
             
-            sendMessage() {
+            async sendMessage() {
                 const message = this.messageInput.value.trim();
                 if (!message || this.isTyping) return;
                 
@@ -403,85 +472,119 @@
                 this.messageInput.value = '';
                 this.messageInput.style.height = 'auto';
                 
-                // Salvar no contexto
                 this.conversationContext.push({ role: 'user', text: message });
                 
                 this.showTypingIndicator();
                 this.isTyping = true;
                 this.sendButton.disabled = true;
                 
-                // Simular tempo de digitação
-                setTimeout(() => {
-                    this.removeTypingIndicator();
-                    this.processMessage(message);
-                    this.isTyping = false;
-                    this.sendButton.disabled = false;
-                }, 500 + Math.random() * 500);
+                await new Promise(resolve => setTimeout(resolve, 300));
+                this.removeTypingIndicator();
+                await this.processMessage(message);
+                this.isTyping = false;
+                this.sendButton.disabled = false;
             }
             
-            processMessage(message) {
-                const lowerMessage = message.toLowerCase();
+            async processMessage(message) {
                 let response = null;
-                let matched = false;
-                
-                // Verificar se contém nome
-                if (lowerMessage.includes('meu nome é') || lowerMessage.includes('me chamo')) {
-                    const nameMatch = message.match(/(?:meu nome é|me chamo)\s+(\w+)/i);
-                    if (nameMatch) {
-                        this.userName = nameMatch[1];
-                        response = `Prazer em conhecer você, ${this.userName}! Como posso ajudar?`;
-                        matched = true;
+
+                // Tenta usar Gemini AI se tiver chave
+                if (this.apiKey) {
+                    try {
+                        response = await this.askGemini(message);
+                    } catch (error) {
+                        console.error('Erro Gemini:', error);
+                        response = null;
                     }
                 }
-                
-                // Verificar soma
-                if (!matched && (lowerMessage.includes('soma') || lowerMessage.includes('mais'))) {
-                    const sumMatch = message.match(/(\d+)\s*(?:soma|mais)\s*(\d+)/i);
-                    if (sumMatch) {
+
+                // Fallback para respostas locais
+                if (!response) {
+                    const lowerMessage = message.toLowerCase();
+                    let matched = false;
+
+                    if (lowerMessage.includes('meu nome é') || lowerMessage.includes('me chamo')) {
+                        const nameMatch = message.match(/(?:meu nome é|me chamo)\s+(\w+)/i);
+                        if (nameMatch) {
+                            this.userName = nameMatch[1];
+                            response = `Prazer em conhecer você, ${this.userName}! Como posso ajudar?`;
+                            matched = true;
+                        }
+                    }
+
+                    if (!matched && (lowerMessage.includes('soma') || lowerMessage.includes('mais'))) {
                         response = this.calculateSum(message);
                         matched = true;
                     }
-                }
-                
-                // Verificar padrões específicos
-                if (!matched) {
-                    for (let [key, value] of Object.entries(this.responses)) {
-                        if (lowerMessage.includes(key)) {
-                            response = typeof value === 'function' ? value(message) : value;
-                            matched = true;
-                            break;
+
+                    if (!matched) {
+                        for (let [key, value] of Object.entries(this.responses)) {
+                            if (lowerMessage.includes(key)) {
+                                response = typeof value === 'function' ? value(message) : value;
+                                matched = true;
+                                break;
+                            }
                         }
                     }
+
+                    if (!matched) {
+                        response = this.responses.default(message);
+                    }
                 }
-                
-                // Resposta padrão se nada foi encontrado
-                if (!matched) {
-                    response = this.responses.default(message);
-                }
-                
+
                 this.addMessage(response, 'bot');
                 this.conversationContext.push({ role: 'bot', text: response });
-                
-                // Manter apenas últimas 20 mensagens no contexto
+
                 if (this.conversationContext.length > 20) {
                     this.conversationContext = this.conversationContext.slice(-20);
                 }
             }
+
+            async askGemini(message) {
+                if (!this.apiKey) {
+                    throw new Error('API key não configurada');
+                }
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: `Responda em português brasileiro de forma amigável e útil. Seja educado e prestativo. Pergunta: ${message}`
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.9,
+                        maxOutputTokens: 500,
+                    }
+                };
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'Erro na API Gemini');
+                }
+                
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                return text || "Desculpe, não consegui gerar uma resposta.";
+            }
             
             showHelp() {
                 return `📚 *Comandos Disponíveis*\n\n` +
-                       `💬 *Saudações*\n` +
-                       `• "olá", "oi", "bom dia", "boa tarde", "boa noite"\n\n` +
-                       `🎯 *Comandos Especiais*\n` +
-                       `• "piada" - Conta uma piada engraçada\n` +
-                       `• "conselho" - Dá um conselho motivacional\n` +
-                       `• "fato" - Mostra uma curiosidade interessante\n` +
-                       `• "horas" - Mostra o horário atual\n` +
-                       `• "data" - Mostra a data de hoje\n` +
-                       `• "soma X e Y" - Soma dois números\n\n` +
-                       `👤 *Personalização*\n` +
-                       `• "meu nome é [nome]" - Para eu te chamar pelo nome\n\n` +
-                       `💡 *Dica*: Use os botões de sugestão abaixo para começar!`;
+                       `💬 "olá", "oi", "bom dia", "boa tarde", "boa noite"\n\n` +
+                       `🎯 "piada", "conselho", "fato", "horas", "data"\n` +
+                       `🧮 "soma 5 e 3"\n` +
+                       `👤 "meu nome é [nome]"\n\n` +
+                       `🤖 *Gemini AI*: Quando conectado, respondo perguntas complexas!`;
             }
             
             tellJoke() {
@@ -491,11 +594,7 @@
                     "Por que o computador foi ao médico? Porque estava com vírus! 💻",
                     "Qual é o café mais perigoso do mundo? O café com leite! ☕",
                     "O que o zero disse para o oito? Belo cinto! 0️⃣",
-                    "Por que a vaca foi para o espaço? Para ver o vácuo! 🐮",
-                    "Qual é o animal mais velho do mundo? A girafa, porque ela tem o pescoço longo! 🦒",
-                    "O que a cobra disse para o sapo? 'Você é um anfíbio!' 🐍",
-                    "Por que o esqueleto não brigou com ninguém? Porque ele não tem estômago! 💀",
-                    "Qual é o doce mais triste? O melancolia! 🍬"
+                    "Por que a vaca foi para o espaço? Para ver o vácuo! 🐮"
                 ];
                 return `😄 ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             }
@@ -505,13 +604,7 @@
                     "💭 Lembre-se: cada dia é uma nova oportunidade para ser feliz!",
                     "💭 Acredite em si mesmo e tudo será possível!",
                     "💭 Não compare sua vida com a dos outros. Cada um tem seu tempo!",
-                    "💭 Pequenos passos todos os dias levam a grandes conquistas!",
-                    "💭 Seja grato pelo que você tem enquanto luta pelo que você quer!",
-                    "💭 O sucesso é a soma de pequenos esforços repetidos dia após dia.",
-                    "💭 Não espere por oportunidades, crie você mesmo!",
-                    "💭 Acredite que você pode e já está no meio do caminho.",
-                    "💭 Sorria! A vida é muito curta para ser levada tão a sério.",
-                    "💭 Você é mais forte do que imagina e mais capaz do que pensa!"
+                    "💭 Pequenos passos todos os dias levam a grandes conquistas!"
                 ];
                 return advices[Math.floor(Math.random() * advices.length)];
             }
@@ -521,37 +614,26 @@
                     "📊 Os ursos polares têm a pele preta embaixo do pelo branco!",
                     "📊 O coração de um camarão está localizado em sua cabeça!",
                     "📊 As girafas têm o mesmo número de vértebras no pescoço que os humanos (7)!",
-                    "📊 O olho do avestruz é maior que seu cérebro!",
-                    "📊 Um dia em Vênus dura mais que um ano em Vênus!",
-                    "📊 Os elefantes são os únicos mamíferos que não podem pular!",
-                    "📊 As abelhas podem reconhecer rostos humanos!",
-                    "📊 Os flamingos nascem cinzas e ficam rosas por causa da alimentação!",
-                    "📊 As lontras dão as mãos enquanto dormem para não se separarem!",
-                    "📊 Os cangurus não conseguem andar para trás!"
+                    "📊 O olho do avestruz é maior que seu cérebro!"
                 ];
                 return `🔍 ${facts[Math.floor(Math.random() * facts.length)]}`;
             }
             
             getCurrentTime() {
                 const now = new Date();
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                const seconds = now.getSeconds().toString().padStart(2, '0');
-                return `⏰ Agora são ${hours}:${minutes}:${seconds}`;
+                return `⏰ Agora são ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             }
             
             getCurrentDate() {
                 const now = new Date();
                 const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                const dateStr = now.toLocaleDateString('pt-BR', options);
-                return `📅 Hoje é ${dateStr}`;
+                return `📅 Hoje é ${now.toLocaleDateString('pt-BR', options)}`;
             }
             
             calculateSum(message) {
                 const numbers = message.match(/\d+/g);
                 if (numbers && numbers.length >= 2) {
-                    const sum = numbers.reduce((a, b) => parseInt(a) + parseInt(b), 0);
-                    return `🧮 A soma é ${sum}`;
+                    return `🧮 A soma é ${numbers.reduce((a, b) => parseInt(a) + parseInt(b), 0)}`;
                 }
                 return "Por favor, diga dois números para somar. Exemplo: 'soma 5 e 3'";
             }
@@ -560,53 +642,60 @@
                 const defaultResponses = [
                     `Interessante! Me conte mais sobre "${message}".`,
                     "Entendo. Como posso ajudar com isso?",
-                    "Fale mais sobre isso, estou aqui para ajudar!",
-                    "Que legal! Você pode me perguntar sobre piadas, conselhos ou fatos interessantes.",
-                    "Hmm, não tenho uma resposta pronta para isso. Que tal tentar 'ajuda' para ver os comandos?"
+                    "Que tal tentar 'ajuda' para ver os comandos disponíveis?",
+                    "Hmm, não tenho uma resposta pronta para isso. Que tal uma piada?"
                 ];
                 
-                // Verificar se já conhece o nome
                 if (this.userName && message.toLowerCase().includes(this.userName.toLowerCase())) {
                     return `Sim, ${this.userName}! Como posso ajudar você?`;
                 }
                 
                 return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
             }
+
+            saveApiKey() {
+                const key = this.apiKeyInput.value.trim();
+                if (!key) {
+                    localStorage.removeItem('geminiApiKey');
+                    this.apiKey = '';
+                    this.apiStatus.textContent = '⚠️ Chave removida. Usando respostas locais.';
+                    this.apiStatus.style.color = '#ff9800';
+                    this.apiKeyInput.value = '';
+                    return;
+                }
+                
+                // Validar formato básico da chave
+                if (!key.startsWith('AIza')) {
+                    this.apiStatus.textContent = '❌ Chave inválida! A chave Gemini deve começar com "AIza"';
+                    this.apiStatus.style.color = '#f44336';
+                    return;
+                }
+                
+                localStorage.setItem('geminiApiKey', key);
+                this.apiKey = key;
+                this.apiStatus.textContent = '✅ Google Gemini AI conectado com sucesso!';
+                this.apiStatus.style.color = '#4caf50';
+                this.apiKeyInput.value = '***************';
+            }
             
             addMessage(text, sender) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${sender}`;
-                
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
-                contentDiv.innerHTML = this.formatMessage(text);
-                
+                contentDiv.innerHTML = text.replace(/\n/g, '<br>').replace(/\*(.*?)\*/g, '<strong>$1</strong>');
                 messageDiv.appendChild(contentDiv);
                 this.messagesContainer.appendChild(messageDiv);
                 this.scrollToBottom();
-            }
-            
-            formatMessage(text) {
-                // Formatação simples
-                text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-                text = text.replace(/\n/g, '<br>');
-                text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#667eea;">$1</a>');
-                return text;
             }
             
             showTypingIndicator() {
                 const typingDiv = document.createElement('div');
                 typingDiv.className = 'message bot';
                 typingDiv.id = 'typingIndicator';
-                
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
-                
-                const indicator = document.createElement('div');
-                indicator.className = 'typing-indicator';
-                indicator.innerHTML = '<span></span><span></span><span></span>';
-                
-                contentDiv.appendChild(indicator);
+                contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
                 typingDiv.appendChild(contentDiv);
                 this.messagesContainer.appendChild(typingDiv);
                 this.scrollToBottom();
@@ -614,9 +703,7 @@
             
             removeTypingIndicator() {
                 const indicator = document.getElementById('typingIndicator');
-                if (indicator) {
-                    indicator.remove();
-                }
+                if (indicator) indicator.remove();
             }
             
             clearChat() {
@@ -631,9 +718,9 @@
             }
         }
         
-        // Inicializar o chatbot
-        document.addEventListener('DOMContentLoaded', () => {
-            new ChatBot();
+        // Inicializar quando a página carregar
+        window.addEventListener('DOMContentLoaded', () => {
+            window.chatBot = new ChatBot();
         });
     </script>
 </body>

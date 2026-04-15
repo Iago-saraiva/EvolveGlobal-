@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -43,7 +44,8 @@
       flex-wrap: wrap;
     }
 
-    button, select {
+    button,
+    select {
       padding: 10px 14px;
       border: none;
       border-radius: 8px;
@@ -450,19 +452,179 @@
         justify-content: center;
       }
     }
+
+    /* Estilos do Modal */
+    .user-info_modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      z-index: 1000;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: modalFadeIn 0.3s ease;
+      display: none;
+    }
+
+    .user-info_modal.show {
+      display: block;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+      animation: overlayFadeIn 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      display: block;
+    }
+
+    @keyframes overlayFadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .user-info_modal .user-name {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .user-info_modal .user-name span {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .user-info_modal .user-image {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .user-info_modal .user-image img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #667eea;
+      padding: 3px;
+    }
+
+    .user-info_modal .user-info {
+      border-top: 1px solid #e0e0e0;
+      padding-top: 20px;
+    }
+
+    .user-info_modal .user-info p {
+      margin: 10px 0;
+      color: #555;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-info_modal .user-info p:before {
+      content: "📧";
+      font-size: 16px;
+    }
+
+    .user-info_modal .user-info p:last-child:before {
+      content: "📱";
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #f44336;
+      color: white;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .close-modal:hover {
+      background: #d32f2f;
+      transform: scale(1.1);
+    }
+
+    .btn-modal {
+      background: #38bdf8;
+      color: #0f172a;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .btn-modal:hover {
+      opacity: 0.9;
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 480px) {
+      .user-info_modal {
+        width: 95%;
+        padding: 20px;
+      }
+
+      .user-info_modal .user-name span {
+        font-size: 20px;
+      }
+
+      .user-info_modal .user-image img {
+        width: 80px;
+        height: 80px;
+      }
+    }
   </style>
 </head>
+
 <body>
 
   <header>
     <h1>🚀 Evolve Code Studio</h1>
 
-    <div id="user-info" class="hidden"></div>
-
     <div class="top-buttons">
       <button id="newProjectBtn">Novo Projeto</button>
       <button id="renameProjectBtn">Renomear Projeto</button>
       <button id="deleteProjectBtn" class="danger-btn">Excluir Projeto</button>
+      <button id="openUserModalBtn" class="btn-modal">👤 Informações do Usuário</button>
     </div>
   </header>
 
@@ -540,7 +702,24 @@
     <button id="resetBtn" class="danger-btn">Resetar Projeto</button>
   </div>
 
+  <!-- Modal com informações do usuário -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="user-info_modal" id="userModal">
+    <button class="close-modal" id="closeModalBtn">×</button>
+    <div class="user-name">
+      <span id="userNameDisplay"></span>
+    </div>
+    <div class="user-image">
+      <img id="userImageDisplay" src="" alt="User Image">
+    </div>
+    <div class="user-info">
+      <p id="userEmailDisplay"></p>
+      <p id="userPhoneDisplay"></p>
+    </div>
+  </div>
+
   <script src="js/editor.js"></script>
 
 </body>
+
 </html>
