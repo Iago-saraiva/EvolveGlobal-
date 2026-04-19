@@ -282,6 +282,24 @@
                 max-width: 85%;
             }
         }
+        
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .btn-voltar button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
     </style>
 </head>
 
@@ -314,6 +332,11 @@
                 autocomplete="off"></textarea>
             <button class="send-button" id="sendButton">Enviar</button>
             <button class="clear-button" id="clearButton">Limpar</button>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="btn-voltar">
+            <button onclick="window.location.href='index.html'">← Voltar</button>
         </div>
     </div>
 
