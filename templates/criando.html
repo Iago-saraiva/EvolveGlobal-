@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evolve Code Studio</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e293b;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      border-bottom: 2px solid #334155;
+    }
+
+    header h1 {
+      font-size: 22px;
+      color: #38bdf8;
+    }
+
+    .top-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    select {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: scale(1.03);
+    }
+
+    select {
+      background: #334155;
+      color: white;
+      border: 1px solid #475569;
+    }
+
+    .danger-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .warning-btn {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .secondary-btn {
+      background: #64748b;
+      color: white;
+    }
+
+    .success-btn {
+      background: #22c55e;
+      color: white;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #334155;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+    }
+
+    #user-info button {
+      background: #ef4444;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .project-nav {
+      background: #1e293b;
+      padding: 10px 15px;
+      border-bottom: 2px solid #334155;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .project-name-badge {
+      background: #334155;
+      color: #38bdf8;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .main-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: #111827;
+      border-right: 2px solid #334155;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 2px solid #334155;
+      background: #1e293b;
+    }
+
+    .sidebar-header h3 {
+      font-size: 16px;
+      color: #38bdf8;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-actions-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .file-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .tree-item {
+      margin-bottom: 6px;
+      border-radius: 8px;
+      background: #1f2937;
+      overflow: hidden;
+      border: 1px solid transparent;
+    }
+
+    .tree-item.active {
+      border-color: #38bdf8;
+    }
+
+    .tree-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+    }
+
+    .tree-label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 14px;
+      word-break: break-word;
+    }
+
+    .tree-folder .tree-label {
+      font-weight: bold;
+      color: #fbbf24;
+    }
+
+    .tree-file .tree-label {
+      color: #e2e8f0;
+    }
+
+    .tree-file.active {
+      background: #0b2942;
+    }
+
+    .tree-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: #475569;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .mini-btn:hover {
+      opacity: 0.9;
+      transform: none;
+    }
+
+    .mini-danger {
+      background: #ef4444;
+    }
+
+    .mini-warning {
+      background: #f59e0b;
+    }
+
+    .folder-files {
+      padding: 0 8px 8px 16px;
+    }
+
+    .editor-preview-wrapper {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .editor-section {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      border-right: 2px solid #334155;
+      min-height: 0;
+    }
+
+    .editor-header {
+      background: #1e293b;
+      padding: 12px;
+      border-bottom: 2px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .editor-file-name {
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    .editor-meta {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: none;
+      outline: none;
+      padding: 15px;
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+
+    .preview-section {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .preview-header {
+      background: #1e293b;
+      padding: 12px;
+      border-bottom: 2px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: white;
+    }
+
+    .bottom-actions {
+      background: #1e293b;
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      border-top: 2px solid #334155;
+    }
+
+    /* TERMINAL */
+    .terminal-panel {
+      background: #020617;
+      border-top: 2px solid #334155;
+      display: none;
+      flex-direction: column;
+      height: 260px;
+    }
+
+    .terminal-panel.active {
+      display: flex;
+    }
+
+    .terminal-header {
+      background: #111827;
+      padding: 10px 12px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .terminal-title {
+      color: #22c55e;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .terminal-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .terminal-output {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .terminal-line {
+      margin-bottom: 6px;
+    }
+
+    .terminal-success {
+      color: #22c55e;
+    }
+
+    .terminal-error {
+      color: #ef4444;
+    }
+
+    .terminal-info {
+      color: #38bdf8;
+    }
+
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .login-message {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 14px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.45);
+      max-width: 380px;
+      width: 90%;
+    }
+
+    .login-message p {
+      margin-bottom: 18px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .login-message button {
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: bold;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    @media (max-width: 1200px) {
+      .main-layout {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        max-height: 300px;
+      }
+
+      .editor-preview-wrapper {
+        flex-direction: column;
+      }
+
+      .editor-section,
+      .preview-section {
+        width: 100%;
+        height: 50vh;
+      }
+
+      header {
+        justify-content: center;
+      }
+    }
+
+    /* Estilos do Modal */
+    .user-info_modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      z-index: 1000;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: modalFadeIn 0.3s ease;
+      display: none;
+    }
+
+    .user-info_modal.show {
+      display: block;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+      animation: overlayFadeIn 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      display: block;
+    }
+
+    @keyframes overlayFadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .user-info_modal .user-name {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .user-info_modal .user-name span {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .user-info_modal .user-image {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .user-info_modal .user-image img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #667eea;
+      padding: 3px;
+    }
+
+    .user-info_modal .user-info {
+      border-top: 1px solid #e0e0e0;
+      padding-top: 20px;
+    }
+
+    .user-info_modal .user-info p {
+      margin: 10px 0;
+      color: #555;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-info_modal .user-info p:before {
+      content: "📧";
+      font-size: 16px;
+    }
+
+    .user-info_modal .user-info p:last-child:before {
+      content: "📱";
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #f44336;
+      color: white;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .close-modal:hover {
+      background: #d32f2f;
+      transform: scale(1.1);
+    }
+
+    .btn-modal {
+      background: #38bdf8;
+      color: #0f172a;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .btn-modal:hover {
+      opacity: 0.9;
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 480px) {
+      .user-info_modal {
+        width: 95%;
+        padding: 20px;
+      }
+
+      .user-info_modal .user-name span {
+        font-size: 20px;
+      }
+
+      .user-info_modal .user-image img {
+        width: 80px;
+        height: 80px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🚀 Evolve Code Studio</h1>
+
+    <div class="top-buttons">
+      <button onclick="window.location.href='index.html'">← Voltar</button>
+      <button id="newProjectBtn">Novo Projeto</button>
+      <button id="renameProjectBtn">Renomear Projeto</button>
+      <button id="deleteProjectBtn" class="danger-btn">Excluir Projeto</button>
+      <button id="openUserModalBtn" class="btn-modal">👤 Informações do Usuário</button>
+    </div>
+  </header>
+
+  <!-- NAVEGAÇÃO ENTRE PROJETOS -->
+  <div class="project-nav">
+    <button id="prevProjectBtn">⬅ Projeto Anterior</button>
+    <select id="projectSelector"></select>
+    <button id="nextProjectBtn">Projeto Próximo ➡</button>
+    <span class="project-name-badge" id="currentProjectBadge">Projeto: Meu Projeto</span>
+  </div>
+
+  <div class="main-layout app-container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>📁 Explorador Profissional</h3>
+        <div class="sidebar-actions">
+          <div class="sidebar-actions-row">
+            <button id="createFolderBtn">+ Pasta</button>
+            <button id="createFileBtn">+ Arquivo</button>
+          </div>
+        </div>
+      </div>
+      <div id="fileTree" class="file-tree"></div>
+    </div>
+
+    <!-- EDITOR + PREVIEW -->
+    <div class="editor-preview-wrapper">
+      <div class="editor-section">
+        <div class="editor-header">
+          <div>
+            <div class="editor-file-name" id="currentFileName">index.html</div>
+            <div class="editor-meta" id="currentFileMeta">Arquivo aberto no editor</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="renameFileBtn" class="warning-btn">Renomear Arquivo</button>
+            <button id="deleteFileBtn" class="danger-btn">Excluir Arquivo</button>
+            <button id="openTerminalBtn" class="success-btn">🐍 Abrir Terminal Python</button>
+          </div>
+        </div>
+
+        <textarea id="codeEditor" placeholder="Selecione ou crie um arquivo..."></textarea>
+
+        <!-- TERMINAL PYTHON -->
+        <div id="terminalPanel" class="terminal-panel">
+          <div class="terminal-header">
+            <span class="terminal-title" id="terminalTitle">Terminal Python</span>
+            <div class="terminal-actions">
+              <button id="runPythonBtn" class="success-btn">▶ Rodar Python</button>
+              <button id="clearTerminalBtn" class="secondary-btn">Limpar Terminal</button>
+              <button id="closeTerminalBtn" class="danger-btn">Fechar</button>
+            </div>
+          </div>
+          <div id="terminalOutput" class="terminal-output"></div>
+        </div>
+      </div>
+
+      <div class="preview-section">
+        <div class="preview-header">
+          <h3>Preview</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="refreshPreviewBtn">Atualizar Preview</button>
+            <button id="openMainFilesBtn" class="secondary-btn">Abrir Arquivos Principais</button>
+          </div>
+        </div>
+        <iframe id="preview"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-actions">
+    <button id="runBtn">▶ Executar</button>
+    <button id="copyBtn">Copiar Código Atual</button>
+    <button id="clearBtn" class="danger-btn">Limpar Arquivo Atual</button>
+    <button id="resetBtn" class="danger-btn">Resetar Projeto</button>
+  </div>
+
+  <!-- Modal com informações do usuário -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="user-info_modal" id="userModal">
+    <button class="close-modal" id="closeModalBtn">×</button>
+    <div class="user-name">
+      <span id="userNameDisplay"></span>
+    </div>
+    <div class="user-image">
+      <img id="userImageDisplay" src="" alt="User Image">
+    </div>
+    <div class="user-info">
+      <p id="userEmailDisplay"></p>
+      <p id="userPhoneDisplay"></p>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // ELEMENTOS
+    // =========================
+    const codeEditor = document.getElementById("codeEditor");
+    const preview = document.getElementById("preview");
+
+    const newProjectBtn = document.getElementById("newProjectBtn");
+    const renameProjectBtn = document.getElementById("renameProjectBtn");
+    const deleteProjectBtn = document.getElementById("deleteProjectBtn");
+
+    const prevProjectBtn = document.getElementById("prevProjectBtn");
+    const nextProjectBtn = document.getElementById("nextProjectBtn");
+    const projectSelector = document.getElementById("projectSelector");
+    const currentProjectBadge = document.getElementById("currentProjectBadge");
+
+    const createFolderBtn = document.getElementById("createFolderBtn");
+    const createFileBtn = document.getElementById("createFileBtn");
+    const fileTree = document.getElementById("fileTree");
+
+    const currentFileName = document.getElementById("currentFileName");
+    const currentFileMeta = document.getElementById("currentFileMeta");
+    const renameFileBtn = document.getElementById("renameFileBtn");
+    const deleteFileBtn = document.getElementById("deleteFileBtn");
+
+    const runBtn = document.getElementById("runBtn");
+    const refreshPreviewBtn = document.getElementById("refreshPreviewBtn");
+    const openMainFilesBtn = document.getElementById("openMainFilesBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    // TERMINAL
+    const openTerminalBtn = document.getElementById("openTerminalBtn");
+    const terminalPanel = document.getElementById("terminalPanel");
+    const terminalOutput = document.getElementById("terminalOutput");
+    const terminalTitle = document.getElementById("terminalTitle");
+    const runPythonBtn = document.getElementById("runPythonBtn");
+    const clearTerminalBtn = document.getElementById("clearTerminalBtn");
+    const closeTerminalBtn = document.getElementById("closeTerminalBtn");
+
+    // =========================
+    // VARIÁVEIS GLOBAIS
+    // =========================
+    let currentProjectName = localStorage.getItem("currentProjectName") || "Meu Projeto";
+    let currentFilePath = "index.html";
+
+    // =========================
+    // LOGIN
+    // =========================
+    function verificarLogin() {
+      const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
+      const logadoIndex = localStorage.getItem("logado");
+
+      if (logadoIndex !== "true" || !usuarioSalvo) {
+        mostrarMensagemLogin();
+        return false;
+      }
+
+      exibirInfoUsuario(usuarioSalvo);
+      return true;
+    }
+
+    function mostrarMensagemLogin() {
+      if (document.querySelector(".login-overlay")) return;
+
+      const overlay = document.createElement("div");
+      overlay.className = "login-overlay";
+      overlay.innerHTML = `
+        <div class="login-message">
+          <p>Você precisa estar logado para acessar esta página.</p>
+          <button onclick="redirecionarLogin()">Fazer Login</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const appContainer = document.querySelector(".app-container");
+      if (appContainer) {
+        appContainer.style.opacity = "0.5";
+        appContainer.style.pointerEvents = "none";
+      }
+
+      const bottomActions = document.querySelector(".bottom-actions");
+      if (bottomActions) {
+        bottomActions.style.opacity = "0.5";
+        bottomActions.style.pointerEvents = "none";
+      }
+    }
+
+    window.redirecionarLogin = function () {
+      localStorage.setItem("redirectAfterLogin", window.location.pathname);
+      window.location.href = "login.html";
+    };
+
+    function exibirInfoUsuario(usuario) {
+      const userInfoDiv = document.getElementById("user-info");
+      if (!userInfoDiv) return;
+
+      const nomeUsuario = usuario.nome || usuario.email || "Usuário";
+
+      userInfoDiv.innerHTML = `
+        <span>👤 Olá, <strong>${nomeUsuario}</strong>!</span>
+        <button onclick="fazerLogout()">Sair</button>
+      `;
+      userInfoDiv.classList.remove("hidden");
+    }
+
+    window.fazerLogout = function () {
+      if (confirm("Deseja realmente sair? Seus dados serão salvos.")) {
+        localStorage.removeItem("usuario");
+        localStorage.removeItem("logado");
+        window.location.href = "login.html";
+      }
+    };
+
+    if (!verificarLogin()) {
+      throw new Error("Usuário não autenticado");
+    }
+
+    // =========================
+    // USER INFO MODAL
+    // =========================
+    // Dados do usuário (você pode modificar ou buscar de uma API)
+    // Dados do usuário
+    const userData = {
+      name: "Ana Silva Santos",
+      email: "ana.silva@email.com",
+      phone: "(11) 98765-4321",
+      image: "https://randomuser.me/api/portraits/women/1.jpg"
+    };
+
+    // Função para abrir o modal
+    function abrirModal() {
+      // Preenche os dados do usuário
+      document.getElementById('userNameDisplay').textContent = userData.name;
+      document.getElementById('userEmailDisplay').textContent = userData.email;
+      document.getElementById('userPhoneDisplay').textContent = userData.phone;
+      document.getElementById('userImageDisplay').src = userData.image;
+
+      // Mostra o modal e o overlay
+      const modal = document.getElementById('userModal');
+      const overlay = document.getElementById('modalOverlay');
+
+      modal.classList.add('show');
+      overlay.classList.add('show');
+
+      // Previne scroll do body
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Função para fechar o modal
+    function fecharModal() {
+      const modal = document.getElementById('userModal');
+      const overlay = document.getElementById('modalOverlay');
+
+      modal.classList.remove('show');
+      overlay.classList.remove('show');
+
+      // Restaura o scroll do body
+      document.body.style.overflow = '';
+    }
+
+    // Configurar eventos quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+      // Botão para abrir o modal
+      const openModalBtn = document.getElementById('openUserModalBtn');
+      if (openModalBtn) {
+        openModalBtn.addEventListener('click', abrirModal);
+      }
+
+      // Botão para fechar o modal
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', fecharModal);
+      }
+
+      // Fechar ao clicar no overlay
+      const overlay = document.getElementById('modalOverlay');
+      if (overlay) {
+        overlay.addEventListener('click', fecharModal);
+      }
+
+      // Fechar modal com a tecla ESC
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          const modal = document.getElementById('userModal');
+          if (modal.classList.contains('show')) {
+            fecharModal();
+          }
+        }
+      });
+    });
+
+    // Função opcional para atualizar dados do usuário dinamicamente
+    function atualizarDadosUsuario(novoUsuario) {
+      userData.name = novoUsuario.name;
+      userData.email = novoUsuario.email;
+      userData.phone = novoUsuario.phone;
+      userData.image = novoUsuario.image;
+    }
+
+    // Aqui você pode adicionar o resto do código do seu editor.js
+    console.log('Sistema de modal carregado com sucesso!');
+    // =========================
+    // DADOS DO PROJETO
+    // =========================
+    function getDefaultProjectData() {
+      return {
+        folders: [],
+        files: {
+          "index.html": "<h1>Olá, mundo!</h1>\n<p>Seu projeto está on</p>",
+          "style.css": "body {\n  font-family: Arial, sans-serif;\n  text-align: center;\n  padding: 40px;\n  background: #f1f5f9;\n}\n\nh1 {\n  color: #0ea5e9;\n}",
+          "script.js": "console.log('Projeto carregado com sucesso!');"
+        }
+      };
+    }
+
+    function getAllProjects() {
+      const projects = [];
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("project_")) {
+          projects.push(key.replace("project_", ""));
+        }
+      }
+
+      if (projects.length === 0) {
+        projects.push("Meu Projeto");
+      }
+
+      return [...new Set(projects)].sort();
+    }
+
+    function getCurrentProjectData() {
+      const saved = localStorage.getItem("project_" + currentProjectName);
+
+      if (!saved) {
+        return getDefaultProjectData();
+      }
+
+      try {
+        const parsed = JSON.parse(saved);
+
+        if (parsed.html !== undefined || parsed.css !== undefined || parsed.js !== undefined) {
+          return {
+            folders: [],
+            files: {
+              "index.html": parsed.html || "",
+              "style.css": parsed.css || "",
+              "script.js": parsed.js || ""
+            }
+          };
+        }
+
+        if (!parsed.files) parsed.files = {};
+        if (!parsed.folders) parsed.folders = [];
+
+        return parsed;
+      } catch (error) {
+        return getDefaultProjectData();
+      }
+    }
+
+    function saveCurrentProjectData(projectData) {
+      localStorage.setItem("project_" + currentProjectName, JSON.stringify(projectData));
+      localStorage.setItem("currentProjectName", currentProjectName);
+    }
+
+    function ensureCurrentProjectExists() {
+      const key = "project_" + currentProjectName;
+      if (!localStorage.getItem(key)) {
+        saveCurrentProjectData(getDefaultProjectData());
+      }
+    }
+
+    // =========================
+    // HELPERS
+    // =========================
+    function isSupportedFile(filePath) {
+      return filePath.endsWith(".html") || filePath.endsWith(".css") || filePath.endsWith(".js");
+    }
+
+    function isPythonFile(filePath) {
+      return filePath && filePath.endsWith(".py");
+    }
+
+    function getFileType(filePath) {
+      if (filePath.endsWith(".html")) return "HTML";
+      if (filePath.endsWith(".css")) return "CSS";
+      if (filePath.endsWith(".js")) return "JavaScript";
+      if (filePath.endsWith(".py")) return "Python";
+      return "Texto";
+    }
+
+    function normalizePath(path) {
+      return path.replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+    }
+
+    function fileExists(projectData, path) {
+      return Object.prototype.hasOwnProperty.call(projectData.files, path);
+    }
+
+    function folderExists(projectData, folderName) {
+      return projectData.folders.includes(folderName);
+    }
+
+    // =========================
+    // TERMINAL PYTHON
+    // =========================
+    function appendTerminalLine(text, className = "") {
+      const line = document.createElement("div");
+      line.className = "terminal-line " + className;
+      line.textContent = text;
+      terminalOutput.appendChild(line);
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    function openPythonTerminal() {
+      if (!isPythonFile(currentFilePath)) {
+        alert("Abra um arquivo .py para usar o terminal Python.");
+        return;
+      }
+
+      terminalPanel.classList.add("active");
+      terminalTitle.textContent = "Terminal Python • " + currentFilePath;
+
+      if (terminalOutput.innerHTML.trim() === "") {
+        appendTerminalLine("Python Terminal iniciado para: " + currentFilePath, "terminal-info");
+        appendTerminalLine("Clique em 'Rodar Python' para simular a execução do arquivo.", "terminal-info");
+      }
+    }
+
+    function closePythonTerminal() {
+      terminalPanel.classList.remove("active");
+    }
+
+    function clearTerminal() {
+      terminalOutput.innerHTML = "";
+    }
+
+    function runPythonFile() {
+      if (!isPythonFile(currentFilePath)) {
+        alert("O terminal Python só funciona com arquivos .py");
+        return;
+      }
+
+      saveCurrentFileContent();
+      terminalPanel.classList.add("active");
+      terminalTitle.textContent = "Terminal Python • " + currentFilePath;
+
+      const code = codeEditor.value;
+      appendTerminalLine(">>> Executando " + currentFilePath + "...", "terminal-info");
+
+      // Simulação básica de saída de Python
+      const lines = code.split("\n");
+      let foundPrint = false;
+      let syntaxError = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        if (!line) continue;
+
+        // Detecta print("...")
+        const printMatch = line.match(/^print\s*\((.*)\)\s*$/);
+        if (printMatch) {
+          foundPrint = true;
+          let output = printMatch[1].trim();
+
+          // remove aspas simples ou duplas
+          if (
+            (output.startsWith('"') && output.endsWith('"')) ||
+            (output.startsWith("'") && output.endsWith("'"))
+          ) {
+            output = output.slice(1, -1);
+          }
+
+          appendTerminalLine(output, "terminal-success");
+          continue;
+        }
+
+        // detecta input
+        if (line.includes("input(")) {
+          appendTerminalLine("[input()] Execução simulada: input não é suportado no navegador.", "terminal-error");
+          continue;
+        }
+
+        // erro simples: print sem fechar
+        if (line.startsWith("print(") && !line.endsWith(")")) {
+          syntaxError = true;
+          appendTerminalLine("SyntaxError: ')' was never closed", "terminal-error");
+          break;
+        }
+      }
+
+      if (!foundPrint && !syntaxError) {
+        appendTerminalLine("Programa executado (simulação).", "terminal-success");
+        appendTerminalLine("Dica: use print('Olá') para ver saídas no terminal.", "terminal-info");
+      }
+
+      appendTerminalLine(">>> Finalizado.\n", "terminal-info");
+    }
+
+    // =========================
+    // UI DE PROJETO
+    // =========================
+    function updateProjectSelector() {
+      const projects = getAllProjects();
+      projectSelector.innerHTML = "";
+
+      projects.forEach(project => {
+        const option = document.createElement("option");
+        option.value = project;
+        option.textContent = project;
+        if (project === currentProjectName) option.selected = true;
+        projectSelector.appendChild(option);
+      });
+
+      currentProjectBadge.textContent = "Projeto: " + currentProjectName;
+    }
+
+    function switchProject(projectName) {
+      saveCurrentFileContent();
+
+      currentProjectName = projectName;
+      localStorage.setItem("currentProjectName", currentProjectName);
+
+      ensureCurrentProjectExists();
+      loadProject();
+    }
+
+    function goToPreviousProject() {
+      const projects = getAllProjects();
+      const currentIndex = projects.indexOf(currentProjectName);
+      const prevIndex = currentIndex <= 0 ? projects.length - 1 : currentIndex - 1;
+      switchProject(projects[prevIndex]);
+    }
+
+    function goToNextProject() {
+      const projects = getAllProjects();
+      const currentIndex = projects.indexOf(currentProjectName);
+      const nextIndex = currentIndex >= projects.length - 1 ? 0 : currentIndex + 1;
+      switchProject(projects[nextIndex]);
+    }
+
+    // =========================
+    // EXPLORADOR DE ARQUIVOS
+    // =========================
+    function renderFileTree() {
+      const projectData = getCurrentProjectData();
+      fileTree.innerHTML = "";
+
+      const rootFiles = Object.keys(projectData.files).filter(file => !file.includes("/")).sort();
+      const folders = [...projectData.folders].sort();
+
+      folders.forEach(folder => {
+        const folderWrapper = document.createElement("div");
+        folderWrapper.className = "tree-item tree-folder";
+
+        const folderRow = document.createElement("div");
+        folderRow.className = "tree-row";
+
+        const folderLabel = document.createElement("div");
+        folderLabel.className = "tree-label";
+        folderLabel.textContent = "📁 " + folder;
+
+        const folderActions = document.createElement("div");
+        folderActions.className = "tree-actions";
+
+        const addFileBtn = document.createElement("button");
+        addFileBtn.className = "mini-btn";
+        addFileBtn.textContent = "+ Arquivo";
+        addFileBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          createFile(folder);
+        });
+
+        const deleteFolderBtn = document.createElement("button");
+        deleteFolderBtn.className = "mini-btn mini-danger";
+        deleteFolderBtn.textContent = "Excluir";
+        deleteFolderBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteFolder(folder);
+        });
+
+        folderActions.appendChild(addFileBtn);
+        folderActions.appendChild(deleteFolderBtn);
+
+        folderRow.appendChild(folderLabel);
+        folderRow.appendChild(folderActions);
+
+        folderWrapper.appendChild(folderRow);
+
+        const folderFilesContainer = document.createElement("div");
+        folderFilesContainer.className = "folder-files";
+
+        const folderFiles = Object.keys(projectData.files)
+          .filter(file => file.startsWith(folder + "/"))
+          .sort();
+
+        folderFiles.forEach(filePath => {
+          const fileWrapper = document.createElement("div");
+          fileWrapper.className = "tree-item tree-file" + (currentFilePath === filePath ? " active" : "");
+
+          const fileRow = document.createElement("div");
+          fileRow.className = "tree-row";
+
+          const fileLabel = document.createElement("div");
+          fileLabel.className = "tree-label";
+          fileLabel.textContent = "📄 " + filePath.split("/").pop();
+          fileLabel.addEventListener("click", () => openFile(filePath));
+
+          const fileActions = document.createElement("div");
+          fileActions.className = "tree-actions";
+
+          const renameBtn = document.createElement("button");
+          renameBtn.className = "mini-btn mini-warning";
+          renameBtn.textContent = "Renomear";
+          renameBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            renameFile(filePath);
+          });
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "mini-btn mini-danger";
+          deleteBtn.textContent = "Excluir";
+          deleteBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteFile(filePath);
+          });
+
+          fileActions.appendChild(renameBtn);
+          fileActions.appendChild(deleteBtn);
+
+          fileRow.appendChild(fileLabel);
+          fileRow.appendChild(fileActions);
+          fileWrapper.appendChild(fileRow);
+          folderFilesContainer.appendChild(fileWrapper);
+        });
+
+        folderWrapper.appendChild(folderFilesContainer);
+        fileTree.appendChild(folderWrapper);
+      });
+
+      rootFiles.forEach(filePath => {
+        const fileWrapper = document.createElement("div");
+        fileWrapper.className = "tree-item tree-file" + (currentFilePath === filePath ? " active" : "");
+
+        const fileRow = document.createElement("div");
+        fileRow.className = "tree-row";
+
+        const fileLabel = document.createElement("div");
+        fileLabel.className = "tree-label";
+        fileLabel.textContent = "📄 " + filePath;
+        fileLabel.addEventListener("click", () => openFile(filePath));
+
+        const fileActions = document.createElement("div");
+        fileActions.className = "tree-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.className = "mini-btn mini-warning";
+        renameBtn.textContent = "Renomear";
+        renameBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          renameFile(filePath);
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "mini-btn mini-danger";
+        deleteBtn.textContent = "Excluir";
+        deleteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteFile(filePath);
+        });
+
+        fileActions.appendChild(renameBtn);
+        fileActions.appendChild(deleteBtn);
+
+        fileRow.appendChild(fileLabel);
+        fileRow.appendChild(fileActions);
+        fileWrapper.appendChild(fileRow);
+
+        fileTree.appendChild(fileWrapper);
+      });
+
+      updateEditorHeader();
+    }
+
+    // =========================
+    // EDITOR
+    // =========================
+    function updateEditorHeader() {
+      currentFileName.textContent = currentFilePath || "Nenhum arquivo";
+      currentFileMeta.textContent = "Tipo: " + getFileType(currentFilePath);
+    }
+
+    function openFile(filePath) {
+      saveCurrentFileContent();
+
+      const projectData = getCurrentProjectData();
+
+      if (!fileExists(projectData, filePath)) {
+        alert("Arquivo não encontrado.");
+        return;
+      }
+
+      currentFilePath = filePath;
+      codeEditor.value = projectData.files[filePath];
+      updateEditorHeader();
+      renderFileTree();
+    }
+
+    function saveCurrentFileContent() {
+      if (!currentFilePath) return;
+
+      const projectData = getCurrentProjectData();
+
+      if (!fileExists(projectData, currentFilePath)) return;
+
+      projectData.files[currentFilePath] = codeEditor.value;
+      saveCurrentProjectData(projectData);
+    }
+
+    function openMainFiles() {
+      openFile("index.html");
+    }
+
+    // =========================
+    // CRUD DE PASTAS
+    // =========================
+    function createFolder() {
+      const folderName = prompt("Digite o nome da nova pasta:");
+
+      if (!folderName || folderName.trim() === "") {
+        alert("Nome de pasta inválido.");
+        return;
+      }
+
+      const cleanFolder = normalizePath(folderName.trim());
+      const projectData = getCurrentProjectData();
+
+      if (folderExists(projectData, cleanFolder)) {
+        alert("Essa pasta já existe.");
+        return;
+      }
+
+      projectData.folders.push(cleanFolder);
+      saveCurrentProjectData(projectData);
+      renderFileTree();
+
+      alert("Pasta criada com sucesso!");
+    }
+
+    function deleteFolder(folderName) {
+      const projectData = getCurrentProjectData();
+
+      const folderFiles = Object.keys(projectData.files).filter(file => file.startsWith(folderName + "/"));
+
+      if (folderFiles.length > 0) {
+        alert("Não é possível excluir uma pasta que contém arquivos.");
+        return;
+      }
+
+      const confirmDelete = confirm("Deseja excluir a pasta '" + folderName + "'?");
+
+      if (!confirmDelete) return;
+
+      projectData.folders = projectData.folders.filter(folder => folder !== folderName);
+      saveCurrentProjectData(projectData);
+      renderFileTree();
+
+      alert("Pasta excluída com sucesso!");
+    }
+
+    // =========================
+    // CRUD DE ARQUIVOS
+    // =========================
+    function createFile(preselectedFolder = "") {
+      const fileName = prompt("Digite o nome do arquivo (ex: app.js, pagina.html, style2.css, main.py):");
+
+      if (!fileName || fileName.trim() === "") {
+        alert("Nome de arquivo inválido.");
+        return;
+      }
+
+      const cleanFile = fileName.trim();
+
+      if (!cleanFile.includes(".")) {
+        alert("O arquivo precisa ter extensão (.html, .css, .js, .py).");
+        return;
+      }
+
+      const projectData = getCurrentProjectData();
+      let targetPath = cleanFile;
+
+      if (preselectedFolder) {
+        targetPath = normalizePath(preselectedFolder + "/" + cleanFile);
+      } else if (projectData.folders.length > 0) {
+        const folderChoice = prompt(
+          "Digite o nome da pasta para salvar o arquivo (deixe vazio para raiz):\n\n" +
+          projectData.folders.join(", ")
+        );
+
+        if (folderChoice && folderChoice.trim() !== "") {
+          const chosenFolder = normalizePath(folderChoice.trim());
+
+          if (!folderExists(projectData, chosenFolder)) {
+            alert("Pasta não existe.");
+            return;
+          }
+
+          targetPath = normalizePath(chosenFolder + "/" + cleanFile);
+        }
+      }
+
+      if (fileExists(projectData, targetPath)) {
+        alert("Esse arquivo já existe.");
+        return;
+      }
+
+      let defaultContent = "";
+
+      if (cleanFile.endsWith(".html")) {
+        defaultContent = "<h1>Novo arquivo HTML</h1>";
+      } else if (cleanFile.endsWith(".css")) {
+        defaultContent = "/* Novo arquivo CSS */";
+      } else if (cleanFile.endsWith(".js")) {
+        defaultContent = "console.log('Novo arquivo JS');";
+      } else if (cleanFile.endsWith(".py")) {
+        defaultContent = "print('Olá, Python!')";
+      } else {
+        defaultContent = "";
+      }
+
+      projectData.files[targetPath] = defaultContent;
+      saveCurrentProjectData(projectData);
+
+      currentFilePath = targetPath;
+      codeEditor.value = defaultContent;
+
+      renderFileTree();
+      updateEditorHeader();
+
+      alert("Arquivo criado com sucesso!");
+    }
+
+    function renameFile(filePath = currentFilePath) {
+      const projectData = getCurrentProjectData();
+
+      if (!fileExists(projectData, filePath)) {
+        alert("Arquivo não encontrado.");
+        return;
+      }
+
+      const parts = filePath.split("/");
+      const oldFileName = parts.pop();
+      const folderPath = parts.join("/");
+
+      const newFileName = prompt("Digite o novo nome do arquivo:", oldFileName);
+
+      if (!newFileName || newFileName.trim() === "") {
+        alert("Nome inválido.");
+        return;
+      }
+
+      const cleanNewFileName = newFileName.trim();
+      const newPath = folderPath ? normalizePath(folderPath + "/" + cleanNewFileName) : cleanNewFileName;
+
+      if (newPath === filePath) {
+        return;
+      }
+
+      if (fileExists(projectData, newPath)) {
+        alert("Já existe um arquivo com esse nome.");
+        return;
+      }
+
+      const content = projectData.files[filePath];
+      delete projectData.files[filePath];
+      projectData.files[newPath] = content;
+
+      if (currentFilePath === filePath) {
+        currentFilePath = newPath;
+      }
+
+      saveCurrentProjectData(projectData);
+
+      if (currentFilePath === newPath) {
+        codeEditor.value = content;
+      }
+
+      renderFileTree();
+      updateEditorHeader();
+      updatePreview();
+
+      alert("Arquivo renomeado com sucesso!");
+    }
+
+    function deleteFile(filePath = currentFilePath) {
+      const projectData = getCurrentProjectData();
+
+      if (!fileExists(projectData, filePath)) {
+        alert("Arquivo não encontrado.");
+        return;
+      }
+
+      const protectedFiles = ["index.html", "style.css", "script.js"];
+      if (protectedFiles.includes(filePath)) {
+        const confirmProtected = confirm(
+          "Esse é um arquivo principal do preview (" + filePath + "). Deseja realmente excluir?"
+        );
+
+        if (!confirmProtected) return;
+      } else {
+        const confirmDelete = confirm("Deseja excluir o arquivo '" + filePath + "'?");
+        if (!confirmDelete) return;
+      }
+
+      delete projectData.files[filePath];
+
+      if (!projectData.files["index.html"]) projectData.files["index.html"] = "";
+      if (!projectData.files["style.css"]) projectData.files["style.css"] = "";
+      if (!projectData.files["script.js"]) projectData.files["script.js"] = "";
+
+      saveCurrentProjectData(projectData);
+
+      currentFilePath = "index.html";
+      codeEditor.value = projectData.files["index.html"] || "";
+
+      renderFileTree();
+      updateEditorHeader();
+      updatePreview();
+
+      alert("Arquivo excluído com sucesso.");
+    }
+
+    // =========================
+    // PREVIEW
+    // =========================
+    function updatePreview() {
+      saveCurrentFileContent();
+
+      const projectData = getCurrentProjectData();
+
+      const html = projectData.files["index.html"] || "";
+      const css = "<style>" + (projectData.files["style.css"] || "") + "</style>";
+      const js = "<script>" + (projectData.files["script.js"] || "") + "<\/script>";
+
+      preview.srcdoc = html + css + js;
+    }
+
+    // =========================
+    // PROJETOS
+    // =========================
+    function createNewProject() {
+      const projectName = prompt("Digite o nome do novo projeto:");
+
+      if (!projectName || projectName.trim() === "") {
+        alert("Nome do projeto inválido.");
+        return;
+      }
+
+      currentProjectName = projectName.trim();
+      saveCurrentProjectData(getDefaultProjectData());
+
+      currentFilePath = "index.html";
+      loadProject();
+
+      alert("Projeto criado com sucesso: " + currentProjectName);
+    }
+
+    function renameCurrentProject() {
+      const newName = prompt("Digite o novo nome do projeto:", currentProjectName);
+
+      if (!newName || newName.trim() === "") {
+        alert("Nome inválido.");
+        return;
+      }
+
+      const cleanName = newName.trim();
+
+      if (cleanName === currentProjectName) return;
+
+      const existing = localStorage.getItem("project_" + cleanName);
+      if (existing) {
+        alert("Já existe um projeto com esse nome.");
+        return;
+      }
+
+      const oldData = localStorage.getItem("project_" + currentProjectName);
+
+      if (oldData) {
+        localStorage.setItem("project_" + cleanName, oldData);
+        localStorage.removeItem("project_" + currentProjectName);
+      }
+
+      currentProjectName = cleanName;
+      localStorage.setItem("currentProjectName", currentProjectName);
+
+      updateProjectSelector();
+
+      alert("Projeto renomeado com sucesso!");
+    }
+
+    function deleteCurrentProject() {
+      const confirmDelete = confirm("Tem certeza que deseja excluir o projeto '" + currentProjectName + "'?");
+
+      if (!confirmDelete) return;
+
+      localStorage.removeItem("project_" + currentProjectName);
+
+      const projects = getAllProjects().filter(project => project !== currentProjectName);
+
+      if (projects.length === 0) {
+        currentProjectName = "Meu Projeto";
+        saveCurrentProjectData(getDefaultProjectData());
+      } else {
+        currentProjectName = projects[0];
+        ensureCurrentProjectExists();
+      }
+
+      currentFilePath = "index.html";
+      loadProject();
+
+      alert("Projeto excluído com sucesso!");
+    }
+
+    function resetCurrentProject() {
+      const confirmReset = confirm("Deseja resetar todo o projeto?");
+
+      if (!confirmReset) return;
+
+      saveCurrentProjectData(getDefaultProjectData());
+      currentFilePath = "index.html";
+      loadProject();
+
+      alert("Projeto resetado com sucesso.");
+    }
+
+    // =========================
+    // AÇÕES GERAIS
+    // =========================
+    function copyCurrentFile() {
+      navigator.clipboard.writeText(codeEditor.value)
+        .then(() => {
+          alert("Código copiado com sucesso!");
+        })
+        .catch(() => {
+          alert("Erro ao copiar o código.");
+        });
+    }
+
+    function clearCurrentFile() {
+      const confirmClear = confirm("Deseja limpar o conteúdo do arquivo atual?");
+
+      if (!confirmClear) return;
+
+      codeEditor.value = "";
+      saveCurrentFileContent();
+      updatePreview();
+    }
+
+    function loadProject() {
+      ensureCurrentProjectExists();
+
+      const projectData = getCurrentProjectData();
+
+      if (!fileExists(projectData, currentFilePath)) {
+        currentFilePath = "index.html";
+      }
+
+      if (!fileExists(projectData, currentFilePath)) {
+        currentFilePath = Object.keys(projectData.files)[0] || "index.html";
+      }
+
+      codeEditor.value = projectData.files[currentFilePath] || "";
+
+      updateProjectSelector();
+      updateEditorHeader();
+      renderFileTree();
+      updatePreview();
+    }
+
+    // =========================
+    // EVENTOS
+    // =========================
+    newProjectBtn.addEventListener("click", createNewProject);
+    renameProjectBtn.addEventListener("click", renameCurrentProject);
+    deleteProjectBtn.addEventListener("click", deleteCurrentProject);
+
+    prevProjectBtn.addEventListener("click", goToPreviousProject);
+    nextProjectBtn.addEventListener("click", goToNextProject);
+    projectSelector.addEventListener("change", (e) => switchProject(e.target.value));
+
+    createFolderBtn.addEventListener("click", createFolder);
+    createFileBtn.addEventListener("click", () => createFile());
+
+    renameFileBtn.addEventListener("click", () => renameFile());
+    deleteFileBtn.addEventListener("click", () => deleteFile());
+
+    runBtn.addEventListener("click", () => {
+      if (isPythonFile(currentFilePath)) {
+        openPythonTerminal();
+        runPythonFile();
+
+        const originalText = runBtn.textContent;
+        runBtn.textContent = "🐍 Python Rodado!";
+
+        setTimeout(() => {
+          runBtn.textContent = originalText;
+        }, 1200);
+
+        return;
+      }
+
+      updatePreview();
+
+      const originalText = runBtn.textContent;
+      runBtn.textContent = "✅ Executado!";
+
+      setTimeout(() => {
+        runBtn.textContent = originalText;
+      }, 1200);
+    });
+
+    refreshPreviewBtn.addEventListener("click", updatePreview);
+    openMainFilesBtn.addEventListener("click", openMainFiles);
+
+    copyBtn.addEventListener("click", copyCurrentFile);
+    clearBtn.addEventListener("click", clearCurrentFile);
+    resetBtn.addEventListener("click", resetCurrentProject);
+
+    codeEditor.addEventListener("input", saveCurrentFileContent);
+
+    // TERMINAL EVENTOS
+    openTerminalBtn.addEventListener("click", openPythonTerminal);
+    runPythonBtn.addEventListener("click", runPythonFile);
+    clearTerminalBtn.addEventListener("click", clearTerminal);
+    closeTerminalBtn.addEventListener("click", closePythonTerminal);
+
+    // =========================
+    // INICIALIZAÇÃO
+    // =========================
+    loadProject();
+  </script>
+
+</body>
+
+</html>

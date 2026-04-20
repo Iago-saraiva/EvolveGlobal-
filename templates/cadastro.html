@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro | EvolveGlobal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0a0f2c, #111c44, #1a2a6c);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 450px;
+      padding: 20px;
+    }
+
+    .auth-box {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      transition: all 0.4s ease;
+    }
+
+    .auth-box:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 14px 45px rgba(0, 0, 0, 0.45);
+    }
+
+    .auth-box h2 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: #d8e2ff;
+      margin-bottom: 25px;
+    }
+
+    .input-group {
+      margin-bottom: 18px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      outline: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid transparent;
+      transition: 0.3s ease;
+    }
+
+    .input-group input::placeholder {
+      color: #d3dbf7;
+    }
+
+    .input-group input:focus {
+      border: 1px solid #4facfe;
+      background: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 0 10px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-auth {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #4facfe, #00f2fe);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .btn-auth:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 20px rgba(79, 172, 254, 0.35);
+    }
+
+    .switch-page {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      color: #d8e2ff;
+    }
+
+    .switch-page a {
+      color: #4facfe;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .switch-page a:hover {
+      text-decoration: underline;
+    }
+
+    /* ANIMAÇÃO */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s ease;
+    }
+
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 480px) {
+      .auth-box {
+        padding: 30px 20px;
+      }
+
+      .auth-box h2 {
+        font-size: 1.6rem;
+      }
+
+      .subtitle {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="auth-container">
+    <div class="auth-box reveal">
+      <h2>Crie sua conta</h2>
+      <p class="subtitle">Cadastre-se para acessar a EvolveGlobal</p>
+
+      <form id="cadastroForm">
+        <div class="input-group">
+          <input type="text" id="nome" placeholder="Digite seu nome completo" required>
+        </div>
+
+        <div class="input-group">
+          <input type="email" id="email" placeholder="Digite seu e-mail" required>
+        </div>
+
+        <div class="input-group">
+          <input type="password" id="senha" placeholder="Crie uma senha" required>
+        </div>
+
+        <button type="submit" class="btn-auth">Cadastrar</button>
+      </form>
+
+      <p class="switch-page">
+        Já tem conta? <a href="login.html">Fazer login</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ================================
+    // ANIMAÇÃO AO CARREGAR / ROLAR
+    // ================================
+    const revealElements = document.querySelectorAll(".reveal");
+
+    function revealOnScroll() {
+      const triggerBottom = window.innerHeight - 100;
+
+      revealElements.forEach((element) => {
+        const elementTop = element.getBoundingClientRect().top;
+
+        if (elementTop < triggerBottom) {
+          element.classList.add("active");
+        }
+      });
+    }
+
+    window.addEventListener("scroll", revealOnScroll);
+    window.addEventListener("load", revealOnScroll);
+
+    // ================================
+    // CADASTRO
+    // ================================
+    const cadastroForm = document.getElementById("cadastroForm");
+
+    if (cadastroForm) {
+      cadastroForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const nome = document.getElementById("nome").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const senha = document.getElementById("senha").value.trim();
+
+        if (!nome || !email || !senha) {
+          alert("Preencha todos os campos!");
+          return;
+        }
+
+        const usuario = {
+          nome: nome,
+          email: email,
+          senha: senha
+        };
+
+        localStorage.setItem("usuario", JSON.stringify(usuario));
+
+        alert("Cadastro realizado com sucesso!");
+        window.location.href = "login.html";
+      });
+    }
+
+    // ================================
+    // LOGIN
+    // ================================
+    const loginForm = document.getElementById("loginForm");
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const emailDigitado = document.getElementById("loginEmail").value.trim();
+        const senhaDigitada = document.getElementById("loginSenha").value.trim();
+
+        const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
+
+        if (!usuarioSalvo) {
+          alert("Nenhum usuário cadastrado! Faça seu cadastro primeiro.");
+          return;
+        }
+
+        if (
+          emailDigitado === usuarioSalvo.email &&
+          senhaDigitada === usuarioSalvo.senha
+        ) {
+          localStorage.setItem("logado", "true");
+          alert(`Bem-vindo, ${usuarioSalvo.nome}!`);
+          window.location.href = "index.html";
+        } else {
+          alert("E-mail ou senha incorretos!");
+        }
+      });
+    }
+
+    // ================================
+    // REDIRECIONAR SE JÁ ESTIVER LOGADO
+    // (opcional: evita voltar para login)
+    // ================================
+    const logado = localStorage.getItem("logado");
+
+    if (
+      logado === "true" &&
+      (window.location.pathname.includes("login.html") ||
+        window.location.pathname.includes("cadastro.html"))
+    ) {
+      // Se quiser ativar isso, descomente:
+      // window.location.href = "index.html";
+    }
+
+    // ================================
+    // FUNÇÃO GLOBAL DE LOGOUT
+    // ================================
+    function logout() {
+      localStorage.removeItem("logado");
+      alert("Você saiu da conta.");
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+
+</html>
