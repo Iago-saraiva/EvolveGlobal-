@@ -19,8 +19,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
       color: #fff;
+      padding: 20px;
     }
 
     .auth-container {
@@ -103,6 +103,11 @@
       box-shadow: 0 8px 20px rgba(79, 172, 254, 0.35);
     }
 
+    .btn-auth:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .switch-page {
       margin-top: 20px;
       font-size: 0.95rem;
@@ -119,7 +124,39 @@
       text-decoration: underline;
     }
 
-    /* ANIMAÇÃO */
+    .error-message {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid rgba(255, 68, 68, 0.5);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+      color: #ff8888;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .reveal {
       opacity: 0;
       transform: translateY(30px);
@@ -131,7 +168,6 @@
       transform: translateY(0);
     }
 
-    /* RESPONSIVO */
     @media (max-width: 480px) {
       .auth-box {
         padding: 30px 20px;
@@ -149,42 +185,47 @@
 </head>
 
 <body>
-
   <div class="auth-container">
     <div class="auth-box reveal">
       <h2>Bem-vindo de volta</h2>
-      <p class="subtitle">Entre na sua conta EvolveGlobal</p>
+      <p class="subtitle">Faça login na EvolveGlobal</p>
+
+      <div id="errorMessage" class="error-message"></div>
 
       <form id="loginForm">
         <div class="input-group">
-          <input type="email" id="loginEmail" placeholder="Digite seu e-mail" required>
+          <input type="email" id="loginEmail" placeholder="Digite seu e-mail" required autocomplete="email">
         </div>
 
         <div class="input-group">
-          <input type="password" id="loginSenha" placeholder="Digite sua senha" required>
+          <input type="password" id="loginSenha" placeholder="Digite sua senha" required
+            autocomplete="current-password">
         </div>
 
-        <button type="submit" class="btn-auth">Entrar</button>
+        <button type="submit" class="btn-auth" id="loginButton">Entrar</button>
       </form>
 
       <p class="switch-page">
-        Não tem conta? <a href="cadastro.html">Cadastre-se</a>
+        Não tem conta? <a href="cadastro.html">Criar conta</a>
       </p>
     </div>
   </div>
 
   <script>
-    // ================================
-    // ANIMAÇÃO AO CARREGAR / ROLAR
-    // ================================
+    // ============================================
+    // CONFIGURAÇÃO DA API
+    // ============================================
+    const API_URL = 'http://localhost:5000/api';
+
+    // ============================================
+    // ANIMAÇÕES
+    // ============================================
     const revealElements = document.querySelectorAll(".reveal");
 
     function revealOnScroll() {
       const triggerBottom = window.innerHeight - 100;
-
       revealElements.forEach((element) => {
         const elementTop = element.getBoundingClientRect().top;
-
         if (elementTop < triggerBottom) {
           element.classList.add("active");
         }
@@ -194,92 +235,181 @@
     window.addEventListener("scroll", revealOnScroll);
     window.addEventListener("load", revealOnScroll);
 
-    // ================================
-    // CADASTRO
-    // ================================
-    const cadastroForm = document.getElementById("cadastroForm");
+    // ============================================
+    // FUNÇÃO PARA MOSTRAR ERRO
+    // ============================================
+    function showError(message) {
+      const errorDiv = document.getElementById("errorMessage");
+      errorDiv.textContent = message;
+      errorDiv.classList.add("show");
 
-    if (cadastroForm) {
-      cadastroForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const nome = document.getElementById("nome").value.trim();
-        const email = document.getElementById("email").value.trim();
-        const senha = document.getElementById("senha").value.trim();
-
-        if (!nome || !email || !senha) {
-          alert("Preencha todos os campos!");
-          return;
-        }
-
-        const usuario = {
-          nome: nome,
-          email: email,
-          senha: senha
-        };
-
-        localStorage.setItem("usuario", JSON.stringify(usuario));
-
-        alert("Cadastro realizado com sucesso!");
-        window.location.href = "login.html";
-      });
+      // Esconder erro após 5 segundos
+      setTimeout(() => {
+        errorDiv.classList.remove("show");
+      }, 5000);
     }
 
-    // ================================
+    // ============================================
+    // FUNÇÃO PARA ESCONDER ERRO
+    // ============================================
+    function hideError() {
+      const errorDiv = document.getElementById("errorMessage");
+      errorDiv.classList.remove("show");
+    }
+
+    // ============================================
     // LOGIN
-    // ================================
+    // ============================================
     const loginForm = document.getElementById("loginForm");
+    const loginButton = document.getElementById("loginButton");
 
     if (loginForm) {
-      loginForm.addEventListener("submit", function (e) {
+      loginForm.addEventListener("submit", async function (e) {
         e.preventDefault();
+        hideError();
 
-        const emailDigitado = document.getElementById("loginEmail").value.trim();
-        const senhaDigitada = document.getElementById("loginSenha").value.trim();
+        const email = document.getElementById("loginEmail").value.trim();
+        const senha = document.getElementById("loginSenha").value.trim();
 
-        const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
-
-        if (!usuarioSalvo) {
-          alert("Nenhum usuário cadastrado! Faça seu cadastro primeiro.");
+        // Validação dos campos
+        if (!email || !senha) {
+          showError("Por favor, preencha todos os campos!");
           return;
         }
 
-        if (
-          emailDigitado === usuarioSalvo.email &&
-          senhaDigitada === usuarioSalvo.senha
-        ) {
-          localStorage.setItem("logado", "true");
-          alert(`Bem-vindo, ${usuarioSalvo.nome}!`);
-          window.location.href = "index.html";
-        } else {
-          alert("E-mail ou senha incorretos!");
+        if (!email.includes('@')) {
+          showError("Por favor, digite um e-mail válido!");
+          return;
+        }
+
+        if (senha.length < 6) {
+          showError("A senha deve ter pelo menos 6 caracteres!");
+          return;
+        }
+
+        // Desabilitar botão durante o login
+        loginButton.disabled = true;
+        loginButton.innerHTML = '<span class="loading"></span> Entrando...';
+
+        try {
+          console.log("Tentando login com:", { email, senha: "***" });
+
+          const response = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, senha })
+          });
+
+          const data = await response.json();
+          console.log("Resposta do servidor:", data);
+
+          if (response.ok && data.success) {
+            // Salvar token e dados do usuário
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem("logado", "true"); // Para compatibilidade com o index.html antigo
+
+            console.log("Dados salvos com sucesso!");
+            console.log("Token:", localStorage.getItem("token"));
+            console.log("User:", localStorage.getItem("user"));
+
+            // Redirecionar para o index
+            window.location.href = "/index.html";
+          } else {
+            // Mostrar erro do servidor
+            showError(data.error || "Email ou senha incorretos!");
+            loginButton.disabled = false;
+            loginButton.innerHTML = 'Entrar';
+          }
+        } catch (error) {
+          console.error("Erro detalhado:", error);
+
+          // Verificar se é erro de conexão
+          if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+            showError("Erro de conexão com o servidor. Verifique se o backend está rodando em http://localhost:5000");
+          } else {
+            showError("Erro ao fazer login. Tente novamente mais tarde.");
+          }
+
+          loginButton.disabled = false;
+          loginButton.innerHTML = 'Entrar';
         }
       });
     }
 
-    // ================================
-    // REDIRECIONAR SE JÁ ESTIVER LOGADO
-    // (opcional: evita voltar para login)
-    // ================================
-    const logado = localStorage.getItem("logado");
+    // ============================================
+    // VERIFICAR SE JÁ ESTÁ LOGADO
+    // ============================================
+    async function verificarSessao() {
+      const token = localStorage.getItem("token");
 
-    if (
-      logado === "true" &&
-      (window.location.pathname.includes("login.html") ||
-        window.location.pathname.includes("cadastro.html"))
-    ) {
-      // Se quiser ativar isso, descomente:
-      // window.location.href = "index.html";
+      if (token && !window.location.pathname.includes("login.html")) {
+        try {
+          const response = await fetch(`${API_URL}/verificar-token`, {
+            headers: {
+              'Authorization': token,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            // Token válido, redirecionar para o index se estiver na página de login
+            if (window.location.pathname.includes("login.html") || window.location.pathname.includes("cadastro.html")) {
+              window.location.href = "/index.html";
+            }
+          } else {
+            // Token inválido, limpar localStorage
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("logado");
+          }
+        } catch (error) {
+          console.error("Erro ao verificar token:", error);
+          // Se o backend estiver offline, ainda assim permitir acesso se tiver token
+          if (window.location.pathname.includes("login.html") || window.location.pathname.includes("cadastro.html")) {
+            // Não redirecionar se o backend estiver offline
+            console.warn("Backend offline, continuando na página de login");
+          }
+        }
+      }
     }
 
-    // ================================
-    // FUNÇÃO GLOBAL DE LOGOUT
-    // ================================
-    function logout() {
-      localStorage.removeItem("logado");
-      alert("Você saiu da conta.");
-      window.location.href = "login.html";
+    // Verificar sessão ao carregar a página
+    verificarSessao();
+
+    // ============================================
+    // TESTE DE CONEXÃO COM O BACKEND
+    // ============================================
+    async function testarConexao() {
+      try {
+        const response = await fetch(`${API_URL}/teste`);
+        const data = await response.json();
+        console.log("✅ Conexão com backend estabelecida:", data);
+      } catch (error) {
+        console.warn("⚠️ Backend não está rodando em", API_URL);
+        console.warn("Inicie o backend com: python app.py");
+      }
     }
+
+    // Testar conexão ao carregar
+    testarConexao();
+
+    // ============================================
+    // ADICIONAR EVENTO DE TECLA ENTER
+    // ============================================
+    const inputs = document.querySelectorAll('input');
+    inputs.forEach(input => {
+      input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (loginForm) {
+            loginForm.dispatchEvent(new Event('submit'));
+          }
+        }
+      });
+    });
   </script>
 </body>
 

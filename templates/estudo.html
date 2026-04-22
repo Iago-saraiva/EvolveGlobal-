@@ -530,7 +530,7 @@
       <nav class="menu">
         <button class="menu-btn active" data-tab="dashboard">🏠 Dashboard</button>
         <button class="menu-btn" data-tab="pomodoro">⏳ Pomodoro</button>
-        <button class="menu-btn" data-tab="checklist">✅ Checklist</button>
+        <button class="menu-btn" data-tab="checklist">✅ Tarefas</button>
         <button class="menu-btn" data-tab="notes">📝 Anotações</button>
         <button class="menu-btn" data-tab="goals">🎯 Metas</button>
         <button class="menu-btn" data-tab="materials">📚 Apostilas</button>
@@ -548,7 +548,7 @@
         </div>
         <div class="topbar-actions">
           <button id="resetAllBtn" class="danger-btn" style="margin-top: 25px;">Reset</button>
-          <button style="height: 40px; margin-top: 25px;" onclick="window.location.href='index.html'">← Voltar</button>
+          <button style="height: 40px; margin-top: 25px;" onclick="window.location.href='/index.html'">← Voltar</button>
         </div>
       </header>
 
@@ -725,86 +725,170 @@
     </main>
   </div>
 
-  <script>
-    // ========== VERIFICAÇÃO DE LOGIN ==========
-    // Função para verificar se o usuário está logado
-    function verificarLogin() {
-      const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
-      const logadoIndex = localStorage.getItem("logado");
-
-      if (logadoIndex !== "true" || !usuarioSalvo) {
-        // Se não estiver logado, mostrar mensagem e redirecionar
-        mostrarMensagemLogin();
-        return false;
-      }
-
-      // Se estiver logado, exibir informações do usuário
-      exibirInfoUsuario(usuarioSalvo);
-      return true;
+<script>
+    // ========== CONFIGURAÇÃO DA API ==========
+    const API_URL = 'http://localhost:5000/api';
+    
+    // ========== VERIFICAÇÃO DE LOGIN COM BACKEND ==========
+    let currentUser = null;
+    let tasks = [];
+    let goals = [];
+    let materials = [];
+    let stats = { study_minutes_today: 0, pomodoro_sessions: 0 };
+    
+    async function verificarLogin() {
+        const token = localStorage.getItem("token");
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        
+        if (!token || !user.id) {
+            mostrarMensagemLogin();
+            return false;
+        }
+        
+        try {
+            const response = await fetch(`${API_URL}/verificar-token`, {
+                headers: { 'Authorization': token }
+            });
+            
+            if (response.ok) {
+                currentUser = user;
+                exibirInfoUsuario(user);
+                await carregarDadosEstudos();
+                return true;
+            } else {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("logado");
+                mostrarMensagemLogin();
+                return false;
+            }
+        } catch (error) {
+            console.error("Erro ao verificar token:", error);
+            mostrarMensagemLogin();
+            return false;
+        }
     }
-
-    // Função para mostrar mensagem de login necessário
+    
     function mostrarMensagemLogin() {
-      // Criar overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'login-overlay';
-      overlay.innerHTML = `
-        <div class="login-message">
-          <p>Você precisa estar logado para acessar esta página.</p>
-          <button onclick="redirecionarLogin()">Fazer Login</button>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-
-      // Desabilitar interação com a página
-      document.querySelector('.app-container').style.opacity = '0.5';
-      document.querySelector('.app-container').style.pointerEvents = 'none';
+        const overlay = document.createElement('div');
+        overlay.className = 'login-overlay';
+        overlay.innerHTML = `
+            <div class="login-message">
+                <h2>🔒 Acesso Restrito</h2>
+                <p>Você precisa estar logado para acessar seus estudos.</p>
+                <button onclick="redirecionarLogin()">Fazer Login</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) {
+            appContainer.style.opacity = '0.5';
+            appContainer.style.pointerEvents = 'none';
+        }
     }
-
-    // Função para redirecionar para o login
-    window.redirecionarLogin = function () {
-      // Salvar a página atual para redirecionar de volta após login
-      localStorage.setItem('redirectAfterLogin', window.location.pathname);
-      window.location.href = 'login.html';
-    };
-
-    // Função para exibir informações do usuário
-    function exibirInfoUsuario(usuario) {
-      const userInfoDiv = document.getElementById('user-info');
-      const nomeUsuario = usuario.nome || usuario.email || 'Usuário';
-
-      userInfoDiv.innerHTML = `
-        <span>👤 Olá, <strong>${nomeUsuario}</strong>!</span>
-        <button onclick="fazerLogout()">Sair</button>
-      `;
-      userInfoDiv.classList.remove('hidden');
-    }
-
-    // Função para fazer logout
-    window.fazerLogout = function () {
-      if (confirm('Deseja realmente sair? Seus dados serão salvos.')) {
-        // Limpar dados de login
-        localStorage.removeItem('usuario');
-        localStorage.removeItem('logado');
-
-        // Redirecionar para login
+    
+    window.redirecionarLogin = function() {
+        localStorage.setItem('redirectAfterLogin', window.location.pathname);
         window.location.href = 'login.html';
-      }
     };
-
-    // ========== EXECUTAR VERIFICAÇÃO ==========
-    // Verificar login imediatamente
-    if (!verificarLogin()) {
-      // Se não estiver logado, interromper a execução do resto do script
-      throw new Error('Usuário não autenticado');
+    
+    function exibirInfoUsuario(usuario) {
+        const userInfoDiv = document.getElementById('user-info');
+        if (userInfoDiv) {
+            userInfoDiv.innerHTML = `
+                <span>👤 Olá, <strong>${usuario.nome}</strong>!</span>
+                <button onclick="fazerLogout()">Sair</button>
+            `;
+            userInfoDiv.classList.remove('hidden');
+        }
     }
-
+    
+    window.fazerLogout = async function() {
+        if (confirm('Deseja realmente sair? Seus dados serão salvos.')) {
+            const token = localStorage.getItem("token");
+            if (token) {
+                try {
+                    await fetch(`${API_URL}/logout`, { 
+                        method: 'POST', 
+                        headers: { 'Authorization': token } 
+                    });
+                } catch (error) {
+                    console.error("Erro no logout:", error);
+                }
+            }
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("logado");
+            window.location.href = 'login.html';
+        }
+    };
+    
+    // ========== FUNÇÕES DE API ==========
+    async function apiRequest(endpoint, options = {}) {
+        const token = localStorage.getItem("token");
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': token,
+            ...options.headers
+        };
+        
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            headers
+        });
+        
+        if (response.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("logado");
+            window.location.href = 'login.html';
+            throw new Error('Sessão expirada');
+        }
+        
+        return response;
+    }
+    
+    // ========== CARREGAR DADOS ==========
+    async function carregarDadosEstudos() {
+        try {
+            // Carregar tarefas
+            const tasksResponse = await apiRequest('/estudos/tarefas');
+            tasks = await tasksResponse.json();
+            renderTasks();
+            
+            // Carregar metas
+            const goalsResponse = await apiRequest('/estudos/metas');
+            goals = await goalsResponse.json();
+            renderGoals();
+            
+            // Carregar materiais
+            const materialsResponse = await apiRequest('/estudos/materiais');
+            materials = await materialsResponse.json();
+            renderMaterials();
+            
+            // Carregar anotações
+            const notesResponse = await apiRequest('/estudos/anotacoes');
+            const notesData = await notesResponse.json();
+            if (notesArea) notesArea.value = notesData.content || '';
+            
+            // Carregar estatísticas
+            const statsResponse = await apiRequest('/estudos/stats');
+            stats = await statsResponse.json();
+            
+            updateDashboard();
+            updateStats();
+            
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error);
+        }
+    }
+    
     // ========== ELEMENTOS ==========
     const menuButtons = document.querySelectorAll(".menu-btn");
     const tabContents = document.querySelectorAll(".tab-content");
     const pageTitle = document.getElementById("pageTitle");
     const resetAllBtn = document.getElementById("resetAllBtn");
-
+    
     // Dashboard
     const todayStudyTime = document.getElementById("todayStudyTime");
     const completedTasksCount = document.getElementById("completedTasksCount");
@@ -815,35 +899,35 @@
     const pendingTasksCount = document.getElementById("pendingTasksCount");
     const notesCount = document.getElementById("notesCount");
     const pomodoroSessionsCount = document.getElementById("pomodoroSessionsCount");
-
+    
     // Checklist
     const taskInput = document.getElementById("taskInput");
     const taskSubject = document.getElementById("taskSubject");
     const addTaskBtn = document.getElementById("addTaskBtn");
     const taskList = document.getElementById("taskList");
     const filterSubject = document.getElementById("filterSubject");
-
+    
     // Notes
     const notesArea = document.getElementById("notesArea");
     const saveNotesBtn = document.getElementById("saveNotesBtn");
-
+    
     // Goals
     const goalInput = document.getElementById("goalInput");
     const addGoalBtn = document.getElementById("addGoalBtn");
     const goalList = document.getElementById("goalList");
-
+    
     // Materials
     const materialName = document.getElementById("materialName");
     const materialLink = document.getElementById("materialLink");
     const addMaterialBtn = document.getElementById("addMaterialBtn");
     const materialsList = document.getElementById("materialsList");
-
+    
     // Stats
     const totalTasksStat = document.getElementById("totalTasksStat");
     const totalGoalsStat = document.getElementById("totalGoalsStat");
     const totalSessionsStat = document.getElementById("totalSessionsStat");
     const totalMaterialsStat = document.getElementById("totalMaterialsStat");
-
+    
     // Pomodoro
     const focusMinutesInput = document.getElementById("focusMinutes");
     const breakMinutesInput = document.getElementById("breakMinutes");
@@ -853,445 +937,494 @@
     const resetTimerBtn = document.getElementById("resetTimerBtn");
     const timerMode = document.getElementById("timerMode");
     const sessionCountEl = document.getElementById("sessionCount");
-
-    // ========== LOCAL STORAGE ==========
-    let tasks = JSON.parse(localStorage.getItem(`studyhub_tasks_${localStorage.getItem("usuario")?.email || "default"}`)) || [];
-    let goals = JSON.parse(localStorage.getItem(`studyhub_goals_${localStorage.getItem("usuario")?.email || "default"}`)) || [];
-    let materials = JSON.parse(localStorage.getItem(`studyhub_materials_${localStorage.getItem("usuario")?.email || "default"}`)) || [];
-    let notes = localStorage.getItem(`studyhub_notes_${localStorage.getItem("usuario")?.email || "default"}`) || "";
-    let stats = JSON.parse(localStorage.getItem(`studyhub_stats_${localStorage.getItem("usuario")?.email || "default"}`)) || {
-      studyMinutesToday: 0,
-      pomodoroSessions: 0
-    };
-
-    // Função para salvar dados por usuário
-    function salvarDadosPorUsuario() {
-      const usuarioEmail = JSON.parse(localStorage.getItem("usuario"))?.email || "default";
-      localStorage.setItem(`studyhub_tasks_${usuarioEmail}`, JSON.stringify(tasks));
-      localStorage.setItem(`studyhub_goals_${usuarioEmail}`, JSON.stringify(goals));
-      localStorage.setItem(`studyhub_materials_${usuarioEmail}`, JSON.stringify(materials));
-      localStorage.setItem(`studyhub_notes_${usuarioEmail}`, notesArea.value);
-      localStorage.setItem(`studyhub_stats_${usuarioEmail}`, JSON.stringify(stats));
-    }
-
+    
     // ========== NAVEGAÇÃO ==========
     menuButtons.forEach(button => {
-      button.addEventListener("click", () => {
-        menuButtons.forEach(btn => btn.classList.remove("active"));
-        button.classList.add("active");
-
-        const tab = button.dataset.tab;
-
-        tabContents.forEach(content => {
-          content.classList.remove("active");
-          if (content.id === tab) content.classList.add("active");
+        button.addEventListener("click", () => {
+            menuButtons.forEach(btn => btn.classList.remove("active"));
+            button.classList.add("active");
+            
+            const tab = button.dataset.tab;
+            tabContents.forEach(content => {
+                content.classList.remove("active");
+                if (content.id === tab) content.classList.add("active");
+            });
+            
+            if (pageTitle) {
+                pageTitle.textContent = button.textContent.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
+            }
         });
-
-        pageTitle.textContent = button.textContent.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
-      });
     });
-
+    
     // ========== CHECKLIST ==========
-    function saveTasks() {
-      salvarDadosPorUsuario();
-    }
-
     function renderTasks() {
-      taskList.innerHTML = "";
-      const selectedFilter = filterSubject.value;
-
-      const filteredTasks = tasks.filter(task => {
-        return selectedFilter === "Todos" || task.subject === selectedFilter;
-      });
-
-      filteredTasks.forEach(task => {
-        const li = document.createElement("li");
-        if (task.completed) li.classList.add("completed");
-
-        li.innerHTML = `
-          <div class="item-left">
-            <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
-            <span>${task.text}</span>
-            <span class="badge">${task.subject}</span>
-          </div>
-          <div class="item-actions">
-            <button class="small-btn delete-btn" onclick="deleteTask(${task.id})">Excluir</button>
-          </div>
-        `;
-
-        taskList.appendChild(li);
-      });
-
-      updateDashboard();
-      updateStats();
-    }
-
-    function addTask() {
-      const text = taskInput.value.trim();
-      const subject = taskSubject.value;
-
-      if (!text) {
-        alert("Digite uma tarefa.");
-        return;
-      }
-
-      tasks.push({
-        id: Date.now(),
-        text,
-        subject,
-        completed: false
-      });
-
-      taskInput.value = "";
-      saveTasks();
-      renderTasks();
-    }
-
-    function toggleTask(id) {
-      tasks = tasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      );
-      saveTasks();
-      renderTasks();
-    }
-
-    function deleteTask(id) {
-      tasks = tasks.filter(task => task.id !== id);
-      saveTasks();
-      renderTasks();
-    }
-
-    window.toggleTask = toggleTask;
-    window.deleteTask = deleteTask;
-
-    addTaskBtn.addEventListener("click", addTask);
-    filterSubject.addEventListener("change", renderTasks);
-
-    // ========== NOTES ==========
-    function saveNotes() {
-      salvarDadosPorUsuario();
-      updateDashboard();
-      alert("Anotações salvas com sucesso!");
-    }
-
-    saveNotesBtn.addEventListener("click", saveNotes);
-
-    // ========== GOALS ==========
-    function saveGoals() {
-      salvarDadosPorUsuario();
-    }
-
-    function renderGoals() {
-      goalList.innerHTML = "";
-
-      goals.forEach(goal => {
-        const li = document.createElement("li");
-        if (goal.completed) li.classList.add("completed");
-
-        li.innerHTML = `
-          <div class="item-left">
-            <input type="checkbox" ${goal.completed ? "checked" : ""} onchange="toggleGoal(${goal.id})">
-            <span>${goal.text}</span>
-          </div>
-          <div class="item-actions">
-            <button class="small-btn delete-btn" onclick="deleteGoal(${goal.id})">Excluir</button>
-          </div>
-        `;
-
-        goalList.appendChild(li);
-      });
-
-      updateDashboard();
-      updateStats();
-    }
-
-    function addGoal() {
-      const text = goalInput.value.trim();
-
-      if (!text) {
-        alert("Digite uma meta.");
-        return;
-      }
-
-      goals.push({
-        id: Date.now(),
-        text,
-        completed: false
-      });
-
-      goalInput.value = "";
-      saveGoals();
-      renderGoals();
-    }
-
-    function toggleGoal(id) {
-      goals = goals.map(goal =>
-        goal.id === id ? { ...goal, completed: !goal.completed } : goal
-      );
-      saveGoals();
-      renderGoals();
-    }
-
-    function deleteGoal(id) {
-      goals = goals.filter(goal => goal.id !== id);
-      saveGoals();
-      renderGoals();
-    }
-
-    window.toggleGoal = toggleGoal;
-    window.deleteGoal = deleteGoal;
-
-    addGoalBtn.addEventListener("click", addGoal);
-
-    // ========== MATERIALS ==========
-    function saveMaterials() {
-      salvarDadosPorUsuario();
-    }
-
-    function setDefaultMaterials() {
-      const defaultMaterials = [
-        {
-          id: Date.now(),
-          name: "Guia de JavaScript Completo",
-          link: "https://developer.mozilla.org/pt-BR/docs/Web/JavaScript"
-        },
-        {
-          id: Date.now() + 1,
-          name: "HTML5 - Material de Apoio",
-          link: "https://developer.mozilla.org/pt-BR/docs/Web/HTML"
-        },
-        {
-          id: Date.now() + 2,
-          name: "CSS3 - Material de apoio",
-          link: "https://developer.mozilla.org/pt-BR/docs/Web/CSS"
+        if (!taskList) return;
+        taskList.innerHTML = "";
+        const selectedFilter = filterSubject ? filterSubject.value : "Todos";
+        
+        const filteredTasks = tasks.filter(task => {
+            return selectedFilter === "Todos" || task.subject === selectedFilter;
+        });
+        
+        if (filteredTasks.length === 0) {
+            taskList.innerHTML = '<li style="text-align: center; color: #888;">Nenhuma tarefa cadastrada</li>';
+            return;
         }
-      ];
-
-      if (materials.length === 0) {
-        materials = defaultMaterials;
-        saveMaterials();
-      }
+        
+        filteredTasks.forEach(task => {
+            const li = document.createElement("li");
+            if (task.completed) li.classList.add("completed");
+            
+            li.innerHTML = `
+                <div class="item-left">
+                    <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
+                    <span>${escapeHtml(task.text)}</span>
+                    <span class="badge">${escapeHtml(task.subject)}</span>
+                </div>
+                <div class="item-actions">
+                    <button class="small-btn delete-btn" onclick="deleteTask(${task.id})">Excluir</button>
+                </div>
+            `;
+            taskList.appendChild(li);
+        });
+        
+        updateDashboard();
+        updateStats();
     }
-
+    
+    async function addTask() {
+        if (!taskInput) return;
+        const text = taskInput.value.trim();
+        const subject = taskSubject ? taskSubject.value : "Geral";
+        
+        if (!text) {
+            alert("Digite uma tarefa.");
+            return;
+        }
+        
+        try {
+            await apiRequest('/estudos/tarefas', {
+                method: 'POST',
+                body: JSON.stringify({ text, subject, completed: false })
+            });
+            
+            taskInput.value = "";
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao adicionar tarefa:", error);
+            alert("Erro ao adicionar tarefa");
+        }
+    }
+    
+    window.toggleTask = async function(id) {
+        const task = tasks.find(t => t.id === id);
+        if (!task) return;
+        
+        try {
+            await apiRequest('/estudos/tarefas', {
+                method: 'PUT',
+                body: JSON.stringify({ id, completed: !task.completed })
+            });
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao atualizar tarefa:", error);
+        }
+    };
+    
+    window.deleteTask = async function(id) {
+        try {
+            await apiRequest(`/estudos/tarefas/${id}`, { method: 'DELETE' });
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao deletar tarefa:", error);
+        }
+    };
+    
+    if (addTaskBtn) addTaskBtn.addEventListener("click", addTask);
+    if (filterSubject) filterSubject.addEventListener("change", () => renderTasks());
+    
+    // ========== NOTES ==========
+    async function saveNotes() {
+        if (!notesArea) return;
+        
+        try {
+            await apiRequest('/estudos/anotacoes', {
+                method: 'POST',
+                body: JSON.stringify({ content: notesArea.value })
+            });
+            alert("Anotações salvas com sucesso!");
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao salvar anotações:", error);
+            alert("Erro ao salvar anotações");
+        }
+    }
+    
+    if (saveNotesBtn) saveNotesBtn.addEventListener("click", saveNotes);
+    
+    // ========== GOALS ==========
+    function renderGoals() {
+        if (!goalList) return;
+        goalList.innerHTML = "";
+        
+        if (goals.length === 0) {
+            goalList.innerHTML = '<li style="text-align: center; color: #888;">Nenhuma meta cadastrada</li>';
+            return;
+        }
+        
+        goals.forEach(goal => {
+            const li = document.createElement("li");
+            if (goal.completed) li.classList.add("completed");
+            
+            li.innerHTML = `
+                <div class="item-left">
+                    <input type="checkbox" ${goal.completed ? "checked" : ""} onchange="toggleGoal(${goal.id})">
+                    <span>${escapeHtml(goal.text)}</span>
+                </div>
+                <div class="item-actions">
+                    <button class="small-btn delete-btn" onclick="deleteGoal(${goal.id})">Excluir</button>
+                </div>
+            `;
+            goalList.appendChild(li);
+        });
+        
+        updateDashboard();
+        updateStats();
+    }
+    
+    async function addGoal() {
+        if (!goalInput) return;
+        const text = goalInput.value.trim();
+        
+        if (!text) {
+            alert("Digite uma meta.");
+            return;
+        }
+        
+        try {
+            await apiRequest('/estudos/metas', {
+                method: 'POST',
+                body: JSON.stringify({ text, completed: false })
+            });
+            
+            goalInput.value = "";
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao adicionar meta:", error);
+            alert("Erro ao adicionar meta");
+        }
+    }
+    
+    window.toggleGoal = async function(id) {
+        const goal = goals.find(g => g.id === id);
+        if (!goal) return;
+        
+        try {
+            await apiRequest('/estudos/metas', {
+                method: 'PUT',
+                body: JSON.stringify({ id, completed: !goal.completed })
+            });
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao atualizar meta:", error);
+        }
+    };
+    
+    window.deleteGoal = async function(id) {
+        try {
+            await apiRequest(`/estudos/metas/${id}`, { method: 'DELETE' });
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao deletar meta:", error);
+        }
+    };
+    
+    if (addGoalBtn) addGoalBtn.addEventListener("click", addGoal);
+    
+    // ========== MATERIALS (VERSÃO CORRIGIDA) ==========
     function renderMaterials() {
-      materialsList.innerHTML = "";
-
-      materials.forEach(material => {
-        const li = document.createElement("li");
-
-        li.innerHTML = `
-          <div class="item-left">
-            <span><strong>${material.name}</strong></span>
-          </div>
-          <div class="item-actions">
-            <a href="${material.link}" target="_blank">
-              <button class="small-btn">Abrir</button>
-            </a>
-            <button class="small-btn delete-btn" onclick="deleteMaterial(${material.id})">Excluir</button>
-          </div>
-        `;
-
-        materialsList.appendChild(li);
-      });
-
-      updateDashboard();
-      updateStats();
+        if (!materialsList) return;
+        materialsList.innerHTML = "";
+        
+        if (!materials || materials.length === 0) {
+            materialsList.innerHTML = '<li style="text-align: center; color: #888;">Nenhum material cadastrado ainda</li>';
+            return;
+        }
+        
+        materials.forEach(material => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <div class="item-left">
+                    <span><strong>${escapeHtml(material.name)}</strong></span>
+                </div>
+                <div class="item-actions">
+                    <a href="${escapeHtml(material.link)}" target="_blank">
+                        <button class="small-btn">📖 Abrir</button>
+                    </a>
+                    <button class="small-btn delete-btn" onclick="deletarMaterial(${material.id})">🗑️ Excluir</button>
+                </div>
+            `;
+            materialsList.appendChild(li);
+        });
+        
+        updateDashboard();
+        updateStats();
     }
-
-    function addMaterial() {
-      const name = materialName.value.trim();
-      const link = materialLink.value.trim();
-
-      if (!name || !link) {
-        alert("Preencha o nome e o link da apostila.");
-        return;
-      }
-
-      materials.push({
-        id: Date.now(),
-        name,
-        link
-      });
-
-      materialName.value = "";
-      materialLink.value = "";
-
-      saveMaterials();
-      renderMaterials();
+    
+    async function adicionarMaterial() {
+        if (!materialName || !materialLink) return;
+        
+        const name = materialName.value.trim();
+        const link = materialLink.value.trim();
+        
+        if (!name) {
+            alert("Por favor, digite o nome do material!");
+            materialName.focus();
+            return;
+        }
+        
+        if (!link) {
+            alert("Por favor, digite o link do material!");
+            materialLink.focus();
+            return;
+        }
+        
+        // Validar URL
+        try {
+            new URL(link);
+        } catch (e) {
+            alert("Por favor, digite uma URL válida (ex: https://www.exemplo.com)");
+            materialLink.focus();
+            return;
+        }
+        
+        // Desabilitar botão durante o salvamento
+        const originalText = addMaterialBtn.textContent;
+        addMaterialBtn.disabled = true;
+        addMaterialBtn.textContent = '💾 Salvando...';
+        
+        try {
+            console.log("Enviando material:", { name, link });
+            
+            const response = await apiRequest('/estudos/materiais', {
+                method: 'POST',
+                body: JSON.stringify({ name, link })
+            });
+            
+            const data = await response.json();
+            console.log("Resposta do servidor:", data);
+            
+            if (response.ok) {
+                alert("✅ Material salvo com sucesso!");
+                materialName.value = "";
+                materialLink.value = "";
+                await carregarDadosEstudos(); // Recarregar todos os dados
+            } else {
+                alert(data.error || "Erro ao salvar material");
+            }
+        } catch (error) {
+            console.error("Erro detalhado ao adicionar material:", error);
+            alert("Erro ao salvar material: " + (error.message || "Tente novamente"));
+        } finally {
+            addMaterialBtn.disabled = false;
+            addMaterialBtn.textContent = originalText;
+        }
     }
-
-    function deleteMaterial(id) {
-      materials = materials.filter(material => material.id !== id);
-      saveMaterials();
-      renderMaterials();
+    
+    window.deletarMaterial = async function(id) {
+        if (!confirm("Tem certeza que deseja excluir este material?")) return;
+        
+        try {
+            const response = await apiRequest(`/estudos/materiais/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                alert("✅ Material excluído com sucesso!");
+                await carregarDadosEstudos();
+            } else {
+                alert("Erro ao excluir material");
+            }
+        } catch (error) {
+            console.error("Erro ao deletar material:", error);
+            alert("Erro ao excluir material");
+        }
+    };
+    
+    // Adicionar evento de clique no botão de material
+    if (addMaterialBtn) {
+        // Remover eventos antigos para evitar duplicação
+        const newAddMaterialBtn = addMaterialBtn.cloneNode(true);
+        addMaterialBtn.parentNode.replaceChild(newAddMaterialBtn, addMaterialBtn);
+        newAddMaterialBtn.addEventListener("click", adicionarMaterial);
     }
-
-    window.deleteMaterial = deleteMaterial;
-
-    setDefaultMaterials();
-    renderMaterials();
-    addMaterialBtn.addEventListener("click", addMaterial);
-
+    
     // ========== POMODORO ==========
     let timer;
     let timeLeft = 25 * 60;
     let isRunning = false;
     let isFocusMode = true;
-
+    
     function updateTimerDisplay() {
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      timerDisplay.textContent =
-        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        if (!timerDisplay) return;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
     }
-
-    function startTimer() {
-      if (isRunning) return;
-
-      isRunning = true;
-
-      timer = setInterval(() => {
-        timeLeft--;
-        updateTimerDisplay();
-
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          isRunning = false;
-
-          if (isFocusMode) {
-            stats.pomodoroSessions++;
-            stats.studyMinutesToday += Number(focusMinutesInput.value);
-            salvarDadosPorUsuario();
-
-            alert("Sessão de foco concluída! Hora da pausa 😎");
-            isFocusMode = false;
-            timerMode.textContent = "Pausa";
-            timeLeft = Number(breakMinutesInput.value) * 60;
-          } else {
-            alert("Pausa finalizada! Bora voltar pro foco 🚀");
-            isFocusMode = true;
-            timerMode.textContent = "Foco";
-            timeLeft = Number(focusMinutesInput.value) * 60;
-          }
-
-          updateTimerDisplay();
-          sessionCountEl.textContent = stats.pomodoroSessions;
-          updateDashboard();
-          updateStats();
+    
+    async function salvarSessaoPomodoro() {
+        stats.pomodoro_sessions++;
+        stats.study_minutes_today += parseInt(focusMinutesInput?.value || 25);
+        
+        try {
+            await apiRequest('/estudos/stats', {
+                method: 'POST',
+                body: JSON.stringify(stats)
+            });
+            await carregarDadosEstudos();
+        } catch (error) {
+            console.error("Erro ao salvar sessão Pomodoro:", error);
         }
-      }, 1000);
     }
-
+    
+    function startTimer() {
+        if (isRunning) return;
+        isRunning = true;
+        
+        timer = setInterval(async () => {
+            timeLeft--;
+            updateTimerDisplay();
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                isRunning = false;
+                
+                if (isFocusMode) {
+                    await salvarSessaoPomodoro();
+                    alert("🎉 Sessão de foco concluída! Hora da pausa 😎");
+                    isFocusMode = false;
+                    if (timerMode) timerMode.textContent = "Pausa";
+                    timeLeft = parseInt(breakMinutesInput?.value || 5) * 60;
+                } else {
+                    alert("⏰ Pausa finalizada! Bora voltar pro foco 🚀");
+                    isFocusMode = true;
+                    if (timerMode) timerMode.textContent = "Foco";
+                    timeLeft = parseInt(focusMinutesInput?.value || 25) * 60;
+                }
+                
+                updateTimerDisplay();
+                if (sessionCountEl) sessionCountEl.textContent = stats.pomodoro_sessions;
+                updateDashboard();
+            }
+        }, 1000);
+    }
+    
     function pauseTimer() {
-      clearInterval(timer);
-      isRunning = false;
+        clearInterval(timer);
+        isRunning = false;
     }
-
+    
     function resetTimer() {
-      clearInterval(timer);
-      isRunning = false;
-      isFocusMode = true;
-      timerMode.textContent = "Foco";
-      timeLeft = Number(focusMinutesInput.value) * 60;
-      updateTimerDisplay();
+        clearInterval(timer);
+        isRunning = false;
+        isFocusMode = true;
+        if (timerMode) timerMode.textContent = "Foco";
+        timeLeft = parseInt(focusMinutesInput?.value || 25) * 60;
+        updateTimerDisplay();
     }
-
-    focusMinutesInput.addEventListener("change", () => {
-      if (!isRunning && isFocusMode) {
-        timeLeft = Number(focusMinutesInput.value) * 60;
-        updateTimerDisplay();
-      }
-    });
-
-    breakMinutesInput.addEventListener("change", () => {
-      if (!isRunning && !isFocusMode) {
-        timeLeft = Number(breakMinutesInput.value) * 60;
-        updateTimerDisplay();
-      }
-    });
-
-    startTimerBtn.addEventListener("click", startTimer);
-    pauseTimerBtn.addEventListener("click", pauseTimer);
-    resetTimerBtn.addEventListener("click", resetTimer);
-
+    
+    if (focusMinutesInput) {
+        focusMinutesInput.addEventListener("change", () => {
+            if (!isRunning && isFocusMode) {
+                timeLeft = parseInt(focusMinutesInput.value) * 60;
+                updateTimerDisplay();
+            }
+        });
+    }
+    
+    if (breakMinutesInput) {
+        breakMinutesInput.addEventListener("change", () => {
+            if (!isRunning && !isFocusMode) {
+                timeLeft = parseInt(breakMinutesInput.value) * 60;
+                updateTimerDisplay();
+            }
+        });
+    }
+    
+    if (startTimerBtn) startTimerBtn.addEventListener("click", startTimer);
+    if (pauseTimerBtn) pauseTimerBtn.addEventListener("click", pauseTimer);
+    if (resetTimerBtn) resetTimerBtn.addEventListener("click", resetTimer);
+    
     // ========== DASHBOARD / STATS ==========
     function updateDashboard() {
-      const completedTasks = tasks.filter(task => task.completed).length;
-      const pendingTasks = tasks.filter(task => !task.completed).length;
-      const completedGoals = goals.filter(goal => goal.completed).length;
-      const notesLength = notesArea.value.trim().length > 0 ? 1 : 0;
-
-      todayStudyTime.textContent = `${stats.studyMinutesToday} min`;
-      completedTasksCount.textContent = completedTasks;
-      completedGoalsCount.textContent = completedGoals;
-      materialsCount.textContent = materials.length;
-      pendingTasksCount.textContent = pendingTasks;
-      notesCount.textContent = notesLength;
-      pomodoroSessionsCount.textContent = stats.pomodoroSessions;
-      sessionCountEl.textContent = stats.pomodoroSessions;
-
-      const totalItems = tasks.length + goals.length;
-      const doneItems = completedTasks + completedGoals;
-      const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
-
-      dailyProgressBar.style.width = `${progress}%`;
-      dailyProgressText.textContent = `${progress}%`;
+        const completedTasks = tasks.filter(task => task.completed).length;
+        const pendingTasks = tasks.filter(task => !task.completed).length;
+        const completedGoals = goals.filter(goal => goal.completed).length;
+        const notesLength = notesArea && notesArea.value.trim().length > 0 ? 1 : 0;
+        
+        if (todayStudyTime) todayStudyTime.textContent = `${stats.study_minutes_today || 0} min`;
+        if (completedTasksCount) completedTasksCount.textContent = completedTasks;
+        if (completedGoalsCount) completedGoalsCount.textContent = completedGoals;
+        if (materialsCount) materialsCount.textContent = materials.length;
+        if (pendingTasksCount) pendingTasksCount.textContent = pendingTasks;
+        if (notesCount) notesCount.textContent = notesLength;
+        if (pomodoroSessionsCount) pomodoroSessionsCount.textContent = stats.pomodoro_sessions || 0;
+        if (sessionCountEl) sessionCountEl.textContent = stats.pomodoro_sessions || 0;
+        
+        const totalItems = tasks.length + goals.length;
+        const doneItems = completedTasks + completedGoals;
+        const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+        
+        if (dailyProgressBar) dailyProgressBar.style.width = `${progress}%`;
+        if (dailyProgressText) dailyProgressText.textContent = `${progress}%`;
     }
-
+    
     function updateStats() {
-      totalTasksStat.textContent = tasks.length;
-      totalGoalsStat.textContent = goals.length;
-      totalSessionsStat.textContent = stats.pomodoroSessions;
-      totalMaterialsStat.textContent = materials.length;
+        if (totalTasksStat) totalTasksStat.textContent = tasks.length;
+        if (totalGoalsStat) totalGoalsStat.textContent = goals.length;
+        if (totalSessionsStat) totalSessionsStat.textContent = stats.pomodoro_sessions || 0;
+        if (totalMaterialsStat) totalMaterialsStat.textContent = materials.length;
     }
-
+    
     // ========== RESET GERAL ==========
-    resetAllBtn.addEventListener("click", () => {
-      const confirmReset = confirm("Tem certeza que deseja apagar todos os seus dados?");
-      if (!confirmReset) return;
-
-      const usuarioEmail = JSON.parse(localStorage.getItem("usuario"))?.email || "default";
-
-      localStorage.removeItem(`studyhub_tasks_${usuarioEmail}`);
-      localStorage.removeItem(`studyhub_goals_${usuarioEmail}`);
-      localStorage.removeItem(`studyhub_materials_${usuarioEmail}`);
-      localStorage.removeItem(`studyhub_notes_${usuarioEmail}`);
-      localStorage.removeItem(`studyhub_stats_${usuarioEmail}`);
-
-      tasks = [];
-      goals = [];
-      materials = [];
-      notes = "";
-      stats = {
-        studyMinutesToday: 0,
-        pomodoroSessions: 0
-      };
-
-      notesArea.value = "";
-      renderTasks();
-      renderGoals();
-      renderMaterials();
-      updateDashboard();
-      updateStats();
-      resetTimer();
-
-      alert("Todos os seus dados foram resetados com sucesso.");
-    });
-
-    // ========== INICIALIZAÇÃO ==========
-    function init() {
-      notesArea.value = notes;
-      timeLeft = Number(focusMinutesInput.value) * 60;
-      updateTimerDisplay();
-      renderTasks();
-      renderGoals();
-      renderMaterials();
-      updateDashboard();
-      updateStats();
+    if (resetAllBtn) {
+        resetAllBtn.addEventListener("click", async () => {
+            const confirmReset = confirm("⚠️ Tem certeza que deseja apagar TODOS os seus dados? Essa ação não pode ser desfeita!");
+            if (!confirmReset) return;
+            
+            try {
+                await apiRequest('/estudos/reset', { method: 'POST' });
+                await carregarDadosEstudos();
+                resetTimer();
+                alert("✅ Todos os seus dados foram resetados com sucesso.");
+            } catch (error) {
+                console.error("Erro ao resetar dados:", error);
+                alert("Erro ao resetar dados");
+            }
+        });
     }
-
+    
+    // ========== FUNÇÃO AUXILIAR ==========
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ========== INICIALIZAÇÃO ==========
+    async function init() {
+        const isAutenticado = await verificarLogin();
+        if (isAutenticado) {
+            if (focusMinutesInput) {
+                timeLeft = parseInt(focusMinutesInput.value) * 60;
+                updateTimerDisplay();
+            }
+        }
+    }
+    
     init();
-  </script>
+</script>
 </body>
 
 </html>

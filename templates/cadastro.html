@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro | EvolveGlobal</title>
   <style>
+    /* Mesmo CSS do login */
     * {
       margin: 0;
       padding: 0;
@@ -19,8 +20,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
       color: #fff;
+      padding: 20px;
     }
 
     .auth-container {
@@ -103,6 +104,11 @@
       box-shadow: 0 8px 20px rgba(79, 172, 254, 0.35);
     }
 
+    .btn-auth:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .switch-page {
       margin-top: 20px;
       font-size: 0.95rem;
@@ -119,7 +125,52 @@
       text-decoration: underline;
     }
 
-    /* ANIMAÇÃO */
+    .error-message {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid rgba(255, 68, 68, 0.5);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+      color: #ff8888;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      background: rgba(68, 255, 68, 0.2);
+      border: 1px solid rgba(68, 255, 68, 0.5);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+      color: #88ff88;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .reveal {
       opacity: 0;
       transform: translateY(30px);
@@ -131,7 +182,6 @@
       transform: translateY(0);
     }
 
-    /* RESPONSIVO */
     @media (max-width: 480px) {
       .auth-box {
         padding: 30px 20px;
@@ -149,26 +199,28 @@
 </head>
 
 <body>
-
   <div class="auth-container">
     <div class="auth-box reveal">
       <h2>Crie sua conta</h2>
       <p class="subtitle">Cadastre-se para acessar a EvolveGlobal</p>
 
+      <div id="errorMessage" class="error-message"></div>
+      <div id="successMessage" class="success-message"></div>
+
       <form id="cadastroForm">
         <div class="input-group">
-          <input type="text" id="nome" placeholder="Digite seu nome completo" required>
+          <input type="text" id="nome" placeholder="Digite seu nome completo" required autocomplete="name">
         </div>
 
         <div class="input-group">
-          <input type="email" id="email" placeholder="Digite seu e-mail" required>
+          <input type="email" id="email" placeholder="Digite seu e-mail" required autocomplete="email">
         </div>
 
         <div class="input-group">
-          <input type="password" id="senha" placeholder="Crie uma senha" required>
+          <input type="password" id="senha" placeholder="Crie uma senha (mínimo 6 caracteres)" required autocomplete="new-password">
         </div>
 
-        <button type="submit" class="btn-auth">Cadastrar</button>
+        <button type="submit" class="btn-auth" id="cadastroButton">Cadastrar</button>
       </form>
 
       <p class="switch-page">
@@ -178,112 +230,163 @@
   </div>
 
   <script>
-    // ================================
-    // ANIMAÇÃO AO CARREGAR / ROLAR
-    // ================================
-    const revealElements = document.querySelectorAll(".reveal");
+    // Configuração da API
+    const API_URL = 'http://localhost:5000/api';
 
+    // Animações
+    const revealElements = document.querySelectorAll(".reveal");
+    
     function revealOnScroll() {
       const triggerBottom = window.innerHeight - 100;
-
       revealElements.forEach((element) => {
         const elementTop = element.getBoundingClientRect().top;
-
         if (elementTop < triggerBottom) {
           element.classList.add("active");
         }
       });
     }
-
+    
     window.addEventListener("scroll", revealOnScroll);
     window.addEventListener("load", revealOnScroll);
 
-    // ================================
-    // CADASTRO
-    // ================================
+    // Funções de mensagem
+    function showError(message) {
+      const errorDiv = document.getElementById("errorMessage");
+      const successDiv = document.getElementById("successMessage");
+      errorDiv.textContent = message;
+      errorDiv.classList.add("show");
+      successDiv.classList.remove("show");
+      
+      setTimeout(() => {
+        errorDiv.classList.remove("show");
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById("successMessage");
+      const errorDiv = document.getElementById("errorMessage");
+      successDiv.textContent = message;
+      successDiv.classList.add("show");
+      errorDiv.classList.remove("show");
+      
+      setTimeout(() => {
+        successDiv.classList.remove("show");
+      }, 3000);
+    }
+
+    function hideMessages() {
+      document.getElementById("errorMessage").classList.remove("show");
+      document.getElementById("successMessage").classList.remove("show");
+    }
+
+    // Cadastro
     const cadastroForm = document.getElementById("cadastroForm");
+    const cadastroButton = document.getElementById("cadastroButton");
 
     if (cadastroForm) {
-      cadastroForm.addEventListener("submit", function (e) {
+      cadastroForm.addEventListener("submit", async function(e) {
         e.preventDefault();
+        hideMessages();
 
         const nome = document.getElementById("nome").value.trim();
         const email = document.getElementById("email").value.trim();
         const senha = document.getElementById("senha").value.trim();
 
+        // Validações
         if (!nome || !email || !senha) {
-          alert("Preencha todos os campos!");
+          showError("Por favor, preencha todos os campos!");
           return;
         }
 
-        const usuario = {
-          nome: nome,
-          email: email,
-          senha: senha
-        };
-
-        localStorage.setItem("usuario", JSON.stringify(usuario));
-
-        alert("Cadastro realizado com sucesso!");
-        window.location.href = "login.html";
-      });
-    }
-
-    // ================================
-    // LOGIN
-    // ================================
-    const loginForm = document.getElementById("loginForm");
-
-    if (loginForm) {
-      loginForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const emailDigitado = document.getElementById("loginEmail").value.trim();
-        const senhaDigitada = document.getElementById("loginSenha").value.trim();
-
-        const usuarioSalvo = JSON.parse(localStorage.getItem("usuario"));
-
-        if (!usuarioSalvo) {
-          alert("Nenhum usuário cadastrado! Faça seu cadastro primeiro.");
+        if (nome.length < 3) {
+          showError("O nome deve ter pelo menos 3 caracteres!");
           return;
         }
 
-        if (
-          emailDigitado === usuarioSalvo.email &&
-          senhaDigitada === usuarioSalvo.senha
-        ) {
-          localStorage.setItem("logado", "true");
-          alert(`Bem-vindo, ${usuarioSalvo.nome}!`);
-          window.location.href = "index.html";
-        } else {
-          alert("E-mail ou senha incorretos!");
+        if (!email.includes('@') || !email.includes('.')) {
+          showError("Por favor, digite um e-mail válido!");
+          return;
+        }
+
+        if (senha.length < 6) {
+          showError("A senha deve ter pelo menos 6 caracteres!");
+          return;
+        }
+
+        // Desabilitar botão durante o cadastro
+        cadastroButton.disabled = true;
+        cadastroButton.innerHTML = '<span class="loading"></span> Cadastrando...';
+
+        try {
+          console.log("Tentando cadastrar:", { nome, email, senha: "***" });
+          
+          const response = await fetch(`${API_URL}/cadastro`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ nome, email, senha })
+          });
+
+          const data = await response.json();
+          console.log("Resposta do servidor:", data);
+
+          if (response.ok && data.success) {
+            showSuccess("Cadastro realizado com sucesso! Redirecionando para o login...");
+            
+            // Limpar formulário
+            cadastroForm.reset();
+            
+            // Redirecionar após 2 segundos
+            setTimeout(() => {
+              window.location.href = "login.html";
+            }, 2000);
+          } else {
+            showError(data.error || "Erro ao realizar cadastro!");
+            cadastroButton.disabled = false;
+            cadastroButton.innerHTML = 'Cadastrar';
+          }
+        } catch (error) {
+          console.error("Erro detalhado:", error);
+          
+          if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+            showError("Erro de conexão com o servidor. Verifique se o backend está rodando em http://localhost:5000");
+          } else {
+            showError("Erro ao cadastrar. Tente novamente mais tarde.");
+          }
+          
+          cadastroButton.disabled = false;
+          cadastroButton.innerHTML = 'Cadastrar';
         }
       });
     }
 
-    // ================================
-    // REDIRECIONAR SE JÁ ESTIVER LOGADO
-    // (opcional: evita voltar para login)
-    // ================================
-    const logado = localStorage.getItem("logado");
-
-    if (
-      logado === "true" &&
-      (window.location.pathname.includes("login.html") ||
-        window.location.pathname.includes("cadastro.html"))
-    ) {
-      // Se quiser ativar isso, descomente:
-      // window.location.href = "index.html";
+    // Testar conexão com o backend
+    async function testarConexao() {
+      try {
+        const response = await fetch(`${API_URL}/teste`);
+        const data = await response.json();
+        console.log("✅ Conexão com backend estabelecida:", data);
+      } catch (error) {
+        console.warn("⚠️ Backend não está rodando em", API_URL);
+        console.warn("Inicie o backend com: python app.py");
+      }
     }
 
-    // ================================
-    // FUNÇÃO GLOBAL DE LOGOUT
-    // ================================
-    function logout() {
-      localStorage.removeItem("logado");
-      alert("Você saiu da conta.");
-      window.location.href = "login.html";
-    }
+    testarConexao();
+
+    // Evento de tecla Enter
+    const inputs = document.querySelectorAll('input');
+    inputs.forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (cadastroForm) {
+            cadastroForm.dispatchEvent(new Event('submit'));
+          }
+        }
+      });
+    });
   </script>
 </body>
 
