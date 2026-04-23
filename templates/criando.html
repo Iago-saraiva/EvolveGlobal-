@@ -1,772 +1,777 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evolve Code Studio</title>
+    <title>Evolve Code Studio - VS Code Style</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-        body { background: #0f172a; color: white; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 2px solid #334155; }
-        header h1 { font-size: 22px; color: #38bdf8; }
-        .top-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
-        button, select { padding: 10px 14px; border: none; border-radius: 8px; cursor: pointer; background: #38bdf8; color: #0f172a; font-weight: bold; }
-        button:hover { opacity: 0.9; }
-        .danger-btn { background: #ef4444; color: white; }
-        .warning-btn { background: #f59e0b; color: white; }
-        .secondary-btn { background: #64748b; color: white; }
-        .success-btn { background: #22c55e; color: white; }
-        .hidden { display: none; }
-        #user-info { display: flex; align-items: center; gap: 10px; background: #334155; padding: 8px 12px; border-radius: 8px; position: absolute; top: 15px; right: 20px; z-index: 100; }
-        .project-nav { background: #1e293b; padding: 10px 15px; border-bottom: 2px solid #334155; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .project-name-badge { background: #334155; color: #38bdf8; padding: 8px 12px; border-radius: 8px; }
-        .main-layout { display: flex; flex: 1; }
-        .sidebar { width: 320px; background: #111827; border-right: 2px solid #334155; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 12px; border-bottom: 2px solid #334155; background: #1e293b; }
-        .sidebar-header h3 { font-size: 16px; color: #38bdf8; margin-bottom: 10px; }
-        .sidebar-actions-row { display: flex; gap: 8px; margin-top: 10px; }
-        .file-tree { flex: 1; overflow-y: auto; padding: 10px; }
-        .tree-item { margin-bottom: 6px; border-radius: 8px; background: #1f2937; }
-        .tree-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
-        .tree-label { flex: 1; cursor: pointer; font-size: 14px; }
-        .tree-folder .tree-label { font-weight: bold; color: #fbbf24; }
-        .tree-file .tree-label { color: #e2e8f0; }
-        .tree-file.active { background: #0b2942; border-radius: 8px; }
-        .tree-actions { display: flex; gap: 6px; }
-        .mini-btn { padding: 5px 8px; border-radius: 6px; font-size: 11px; background: #475569; color: white; cursor: pointer; border: none; }
-        .mini-danger { background: #ef4444; }
-        .mini-warning { background: #f59e0b; }
-        .folder-files { padding: 0 8px 8px 16px; }
-        .editor-preview-wrapper { display: flex; flex: 1; }
-        .editor-section { width: 50%; display: flex; flex-direction: column; border-right: 2px solid #334155; }
-        .editor-header { background: #1e293b; padding: 12px; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; flex-wrap: wrap; }
-        .editor-file-name { font-weight: bold; color: #38bdf8; }
-        .editor-meta { font-size: 13px; color: #cbd5e1; }
-        textarea { flex: 1; width: 100%; resize: none; border: none; outline: none; padding: 15px; font-family: monospace; font-size: 14px; background: #0f172a; color: white; }
-        .preview-section { width: 50%; display: flex; flex-direction: column; }
-        .preview-header { background: #1e293b; padding: 12px; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; flex-wrap: wrap; }
-        iframe { flex: 1; width: 100%; border: none; background: white; }
-        .bottom-actions { background: #1e293b; padding: 12px; display: flex; gap: 10px; border-top: 2px solid #334155; }
-        .terminal-panel { background: #020617; border-top: 2px solid #334155; display: none; flex-direction: column; height: 260px; }
-        .terminal-panel.active { display: flex; }
-        .terminal-header { background: #111827; padding: 10px 12px; display: flex; justify-content: space-between; flex-wrap: wrap; }
-        .terminal-title { color: #22c55e; font-weight: bold; }
-        .terminal-output { flex: 1; padding: 12px; overflow-y: auto; font-family: monospace; font-size: 13px; color: #e2e8f0; }
-        .terminal-line { margin-bottom: 6px; }
-        .terminal-success { color: #22c55e; }
-        .terminal-error { color: #ef4444; }
-        .terminal-info { color: #38bdf8; }
-        .login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .login-message { background: #1e293b; padding: 30px; border-radius: 14px; text-align: center; max-width: 380px; }
-        .login-message button { margin-top: 15px; }
-        .user-info_modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 15px; padding: 30px; width: 90%; max-width: 400px; z-index: 1000; display: none; }
-        .user-info_modal.show { display: block; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
-        .modal-overlay.show { display: block; }
-        .close-modal { position: absolute; top: 15px; right: 15px; background: #f44336; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
-        .debug-panel { position: fixed; bottom: 10px; left: 10px; background: #1e293b; padding: 5px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; opacity: 0.7; z-index: 999; }
-        @media (max-width: 1200px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 300px; } .editor-preview-wrapper { flex-direction: column; } .editor-section, .preview-section { width: 100%; height: 50vh; } }
+        /* ==================== VS CODE DARK MODERN THEME ==================== */
+        :root {
+            --vsc-bg: #1e1e1e;
+            --vsc-sidebar: #252526;
+            --vsc-activity-bar: #2d2d2d;
+            --vsc-editor-bg: #1e1e1e;
+            --vsc-tab-bg: #2d2d2d;
+            --vsc-tab-border: #3e3e42;
+            --vsc-line-number: #858585;
+            --vsc-selection: #264f78;
+            --vsc-folder: #dcb67a;
+            --vsc-file: #9cdcfe;
+            --vsc-terminal-bg: #0c0c0c;
+            --vsc-button-bg: #0e639c;
+            --vsc-button-hover: #1177bb;
+            --vsc-scrollbar: #424242;
+            --vsc-scrollbar-hover: #686868;
+            --vsc-hover: #2a2d2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: var(--vsc-bg);
+            color: #cccccc;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ==================== HEADER ==================== */
+        header {
+            background: var(--vsc-activity-bar);
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3e3e42;
+            height: 48px;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #007acc;
+            letter-spacing: 0.5px;
+        }
+
+        header h1::before {
+            content: "▼ ";
+            font-size: 12px;
+            color: #007acc;
+        }
+
+        .top-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        button,
+        select {
+            background: var(--vsc-button-bg);
+            border: none;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        button:hover,
+        select:hover {
+            background: var(--vsc-button-hover);
+            transform: none;
+        }
+
+        .danger-btn {
+            background: #a1260d;
+        }
+
+        .danger-btn:hover {
+            background: #c42e11;
+        }
+
+        .warning-btn {
+            background: #b89500;
+        }
+
+        .warning-btn:hover {
+            background: #d4aa00;
+        }
+
+        .success-btn {
+            background: #0e639c;
+        }
+
+        .success-btn:hover {
+            background: #1177bb;
+        }
+
+        .secondary-btn {
+            background: #3e3e42;
+        }
+
+        .secondary-btn:hover {
+            background: #4e4e53;
+        }
+
+        /* ==================== USER INFO ==================== */
+        #user-info {
+            position: absolute;
+            top: 8px;
+            right: 16px;
+            background: #2d2d2d;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        #user-info button {
+            background: #a1260d;
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        /* ==================== PROJECT NAV ==================== */
+        .project-nav {
+            background: var(--vsc-tab-bg);
+            padding: 6px 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-bottom: 1px solid var(--vsc-tab-border);
+            height: 48px;
+        }
+
+        .project-nav select {
+            background: #3c3c3c;
+            min-width: 180px;
+        }
+
+        .project-name-badge {
+            background: #3c3c3c;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            margin-left: auto;
+        }
+
+        /* ==================== MAIN LAYOUT ==================== */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ==================== SIDEBAR ==================== */
+        .sidebar {
+            width: 260px;
+            background: var(--vsc-sidebar);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3e3e42;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 10px 16px;
+            background: #2d2d2d;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #bbbbbb;
+        }
+
+        .sidebar-header h3 {
+            font-size: 11px;
+            margin-bottom: 8px;
+            color: #cccccc;
+        }
+
+        .sidebar-actions-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .sidebar-actions-row button {
+            background: #3c3c3c;
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        /* Árvore de arquivos estilo VS Code */
+        .tree-item {
+            margin: 0;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .tree-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px 4px 16px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .tree-row:hover {
+            background: var(--vsc-hover);
+        }
+
+        .tree-label {
+            flex: 1;
+            font-size: 13px;
+            font-family: 'Segoe UI', monospace;
+        }
+
+        .tree-folder .tree-label {
+            color: var(--vsc-folder);
+            font-weight: normal;
+        }
+
+        .tree-file .tree-label {
+            color: var(--vsc-file);
+        }
+
+        .tree-file.active {
+            background: var(--vsc-selection);
+        }
+
+        .tree-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .tree-row:hover .tree-actions {
+            opacity: 1;
+        }
+
+        .mini-btn {
+            background: #3c3c3c;
+            padding: 2px 6px;
+            font-size: 10px;
+            border-radius: 3px;
+        }
+
+        .mini-danger {
+            background: #a1260d;
+        }
+
+        .mini-warning {
+            background: #b89500;
+        }
+
+        .folder-files {
+            padding-left: 24px;
+        }
+
+        /* ==================== EDITOR + PREVIEW ==================== */
+        .editor-preview-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Editor Section */
+        .editor-section {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3e3e42;
+            background: var(--vsc-editor-bg);
+        }
+
+        .editor-header {
+            background: var(--vsc-tab-bg);
+            padding: 8px 12px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #cccccc;
+            font-family: monospace;
+        }
+
+        .editor-meta {
+            font-size: 11px;
+            color: #858585;
+            margin-top: 2px;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            resize: none;
+            border: none;
+            outline: none;
+            padding: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            background: var(--vsc-editor-bg);
+            color: #d4d4d4;
+            tab-size: 4;
+        }
+
+        textarea:focus {
+            outline: none;
+        }
+
+        /* Preview Section */
+        .preview-section {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .preview-header {
+            background: var(--vsc-tab-bg);
+            padding: 8px 12px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-header h3 {
+            font-size: 12px;
+            font-weight: 500;
+            color: #cccccc;
+        }
+
+        iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: white;
+        }
+
+        /* ==================== TERMINAL ==================== */
+        .terminal-panel {
+            background: var(--vsc-terminal-bg);
+            border-top: 1px solid #3e3e42;
+            display: none;
+            flex-direction: column;
+            height: 280px;
+        }
+
+        .terminal-panel.active {
+            display: flex;
+        }
+
+        .terminal-header {
+            background: #2d2d2d;
+            padding: 6px 12px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .terminal-title {
+            color: #22c55e;
+            font-size: 12px;
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .terminal-actions button {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        .terminal-output {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #cccccc;
+        }
+
+        .terminal-line {
+            margin-bottom: 4px;
+        }
+
+        .terminal-success {
+            color: #22c55e;
+        }
+
+        .terminal-error {
+            color: #ef4444;
+        }
+
+        .terminal-info {
+            color: #38bdf8;
+        }
+
+        /* ==================== BOTTOM ACTIONS ==================== */
+        .bottom-actions {
+            background: var(--vsc-tab-bg);
+            padding: 6px 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-top: 1px solid #3e3e42;
+            height: 44px;
+        }
+
+        #statusBar {
+            margin-left: auto;
+            font-size: 11px;
+            color: #858585;
+            font-family: monospace;
+        }
+
+        /* ==================== SCROLLBAR ==================== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--vsc-scrollbar);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--vsc-scrollbar-hover);
+        }
+
+        /* ==================== MODAL ==================== */
+        .user-info_modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #252526;
+            border-radius: 8px;
+            padding: 24px;
+            width: 90%;
+            max-width: 380px;
+            z-index: 1000;
+            display: none;
+            color: #cccccc;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .user-info_modal.show {
+            display: block;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            display: none;
+        }
+
+        .modal-overlay.show {
+            display: block;
+        }
+
+        .user-info_modal .user-name {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .user-info_modal .user-name span {
+            font-size: 20px;
+            font-weight: 600;
+            color: #007acc;
+        }
+
+        .user-info_modal .user-image {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .user-info_modal .user-image img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid #007acc;
+        }
+
+        .user-info_modal .user-info p {
+            margin: 8px 0;
+            color: #cccccc;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #a1260d;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .debug-panel {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            background: #2d2d2d;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0.6;
+            z-index: 999;
+            font-family: monospace;
+        }
+
+        .debug-panel:hover {
+            opacity: 1;
+        }
+
+        /* ==================== LOGIN OVERLAY ==================== */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-message {
+            background: #252526;
+            padding: 32px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 380px;
+            border: 1px solid #3e3e42;
+        }
+
+        .login-message h2 {
+            color: #007acc;
+            margin-bottom: 16px;
+        }
+
+        .login-message p {
+            margin-bottom: 20px;
+            color: #cccccc;
+        }
+
+        .login-message button {
+            background: #0e639c;
+            padding: 8px 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* ==================== RESPONSIVIDADE ==================== */
+        @media (max-width: 1200px) {
+            .main-layout {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+
+            .editor-preview-wrapper {
+                flex-direction: column;
+            }
+
+            .editor-section,
+            .preview-section {
+                width: 100%;
+                height: 50vh;
+            }
+
+            header,
+            .project-nav {
+                padding: 6px 12px;
+            }
+
+            button,
+            select {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .project-nav select {
+                min-width: 120px;
+            }
+
+            .project-name-badge {
+                font-size: 10px;
+            }
+
+            .tree-label {
+                font-size: 11px;
+            }
+
+            textarea {
+                font-size: 12px;
+            }
+
+            .editor-actions {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<header>
-    <h1>🚀 Evolve Code Studio</h1>
-    <div class="top-buttons">
-        <button onclick="window.location.href='index.html'">← Voltar</button>
-        <button id="newProjectBtn">Novo Projeto</button>
-        <button id="renameProjectBtn">Renomear</button>
-        <button id="deleteProjectBtn" class="danger-btn">Excluir</button>
-        <button id="openUserModalBtn">👤 Informações</button>
-    </div>
-</header>
-
-<div id="user-info" class="hidden"></div>
-
-<div class="project-nav">
-    <button id="prevProjectBtn">⬅ Anterior</button>
-    <select id="projectSelector"></select>
-    <button id="nextProjectBtn">Próximo ➡</button>
-    <span class="project-name-badge" id="currentProjectBadge">Carregando...</span>
-</div>
-
-<div class="main-layout">
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h3>📁 Explorador</h3>
-            <div class="sidebar-actions-row">
-                <button id="createFolderBtn">+ Pasta</button>
-                <button id="createFileBtn">+ Arquivo</button>
-            </div>
+    <header>
+        <h1>Evolve Code Studio</h1>
+        <div class="top-buttons">
+            <button onclick="window.location.href='/index.html'">← Voltar</button>
+            <button id="newProjectBtn">Novo Projeto</button>
+            <button id="renameProjectBtn">Renomear</button>
+            <button id="deleteProjectBtn" class="danger-btn">Excluir</button>
+            <button id="openUserModalBtn">👤 Info</button>
         </div>
-        <div id="fileTree" class="file-tree"></div>
+    </header>
+
+    <!-- <div id="user-info" class="hidden"></div> -->
+
+    <div class="project-nav">
+        <button id="prevProjectBtn">⬅ Anterior</button>
+        <select id="projectSelector"></select>
+        <button id="nextProjectBtn">Próximo ➡</button>
+        <span class="project-name-badge" id="currentProjectBadge">Carregando...</span>
+        <button id="createFileBtn" class="secondary-btn">📄 Novo Arquivo</button>
+        <button id="createFolderBtn" class="secondary-btn">📁 Nova Pasta</button>
     </div>
 
-    <div class="editor-preview-wrapper">
-        <div class="editor-section">
-            <div class="editor-header">
-                <div>
-                    <div class="editor-file-name" id="currentFileName">Nenhum arquivo</div>
-                    <div class="editor-meta" id="currentFileMeta">Selecione um arquivo</div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button id="renameFileBtn" class="warning-btn">Renomear</button>
-                    <button id="deleteFileBtn" class="danger-btn">Excluir</button>
-                    <button id="openTerminalBtn" class="success-btn">🐍 Terminal</button>
+    <div class="main-layout">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>EXPLORADOR</h3>
+                <div class="sidebar-actions-row">
+                    <button id="createFolderBtnSidebar" class="mini-btn">📁 Nova Pasta</button>
+                    <button id="createFileBtnSidebar" class="mini-btn">📄 Novo Arquivo</button>
                 </div>
             </div>
-            <textarea id="codeEditor" placeholder="Selecione ou crie um arquivo..."></textarea>
-            <div id="terminalPanel" class="terminal-panel">
-                <div class="terminal-header">
-                    <span class="terminal-title" id="terminalTitle">Terminal Python</span>
+            <div id="fileTree" class="file-tree"></div>
+        </div>
+
+        <div class="editor-preview-wrapper">
+            <div class="editor-section">
+                <div class="editor-header">
                     <div>
-                        <button id="runPythonBtn" class="success-btn">▶ Rodar</button>
-                        <button id="clearTerminalBtn" class="secondary-btn">Limpar</button>
-                        <button id="closeTerminalBtn" class="danger-btn">Fechar</button>
+                        <div class="editor-file-name" id="currentFileName">Nenhum arquivo</div>
+                        <div class="editor-meta" id="currentFileMeta">Selecione um arquivo</div>
+                    </div>
+                    <div class="editor-actions">
+                        <button id="renameFileBtn" class="warning-btn">✏️ Renomear</button>
+                        <button id="deleteFileBtn" class="danger-btn">🗑️ Excluir</button>
+                        <button id="openTerminalBtn" class="success-btn">🐍 Terminal</button>
                     </div>
                 </div>
-                <div id="terminalOutput" class="terminal-output"></div>
-            </div>
-        </div>
-        <div class="preview-section">
-            <div class="preview-header">
-                <h3>Preview</h3>
-                <div>
-                    <button id="refreshPreviewBtn">Atualizar</button>
-                    <button id="openMainFilesBtn" class="secondary-btn">Arquivos Principais</button>
+                <textarea id="codeEditor" spellcheck="false" placeholder="Selecione ou crie um arquivo..."></textarea>
+                <div id="terminalPanel" class="terminal-panel">
+                    <div class="terminal-header">
+                        <span class="terminal-title">🐍 TERMINAL PYTHON</span>
+                        <div class="terminal-actions">
+                            <button id="runPythonBtn" class="success-btn">▶ Rodar</button>
+                            <button id="clearTerminalBtn" class="secondary-btn">Limpar</button>
+                            <button id="closeTerminalBtn" class="danger-btn">Fechar</button>
+                        </div>
+                    </div>
+                    <div id="terminalOutput" class="terminal-output">
+                        <div class="terminal-line terminal-info">🐍 Terminal Python pronto</div>
+                    </div>
                 </div>
             </div>
-            <iframe id="preview" title="Preview" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"></iframe>
+
+            <div class="preview-section">
+                <div class="preview-header">
+                    <h3>🔍 PREVIEW</h3>
+                    <div>
+                        <button id="refreshPreviewBtn">🔄 Atualizar</button>
+                        <button id="openMainFilesBtn" class="secondary-btn">📄 Arquivos Principais</button>
+                    </div>
+                </div>
+                <iframe id="preview" title="Preview"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"></iframe>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="bottom-actions">
-    <button id="runBtn">▶ Executar</button>
-    <button id="copyBtn">Copiar</button>
-    <button id="clearBtn" class="danger-btn">Limpar</button>
-    <button id="resetBtn" class="danger-btn">Resetar</button>
-</div>
+    <div class="bottom-actions">
+        <button id="runBtn">▶ Executar</button>
+        <button id="copyBtn">📋 Copiar</button>
+        <button id="clearBtn" class="danger-btn">🗑️ Limpar</button>
+        <button id="resetBtn" class="danger-btn">🔄 Resetar Projeto</button>
+        <div id="statusBar">Ln 1, Col 1 UTF-8 </div>
+    </div>
 
-<div class="modal-overlay" id="modalOverlay"></div>
-<div class="user-info_modal" id="userModal">
-    <button class="close-modal" id="closeModalBtn">×</button>
-    <div class="user-name"><span id="userNameDisplay"></span></div>
-    <div class="user-image"><img id="userImageDisplay" src="" alt="User" style="width:100px;height:100px;border-radius:50%;"></div>
-    <div class="user-info"><p id="userEmailDisplay"></p></div>
-</div>
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="user-info_modal" id="userModal">
+        <button class="close-modal" id="closeModalBtn">×</button>
+        <div class="user-name"><span id="userNameDisplay"></span></div>
+        <div class="user-image"><img id="userImageDisplay" src="" alt="User"></div>
+        <div class="user-info">
+            <p id="userEmailDisplay"></p>
+        </div>
+    </div>
 
-<div class="debug-panel" onclick="debugState()">🐛 Debug</div>
-
-<script>
-// Configuracao
-const API_URL = 'http://localhost:5000/api';
-
-// Elementos
-const codeEditor = document.getElementById('codeEditor');
-const preview = document.getElementById('preview');
-const fileTree = document.getElementById('fileTree');
-
-// Variaveis
-let currentProjectId = null;
-let currentProjectName = 'Meu Projeto';
-let currentFilePath = 'index.html';
-let projetos = [];
-let arquivos = {};
-let pastas = [];
-let saveTimeout = null;
-
-// Funcao de requisicao API
-async function req(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-    const headers = { 'Content-Type': 'application/json', 'Authorization': token };
-    const res = await fetch(API_URL + endpoint, { ...options, headers });
-    if (res.status === 401) {
-        window.location.href = 'login.html';
-        throw new Error('Nao autorizado');
-    }
-    return res;
-}
-
-// Verificar login
-async function checkLogin() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = 'login.html';
-        return false;
-    }
-    try {
-        const res = await fetch(API_URL + '/verificar-token', { headers: { 'Authorization': token } });
-        if (res.ok) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const infoDiv = document.getElementById('user-info');
-            infoDiv.innerHTML = '<span>Ola, ' + user.nome + '!</span><button onclick="logout()">Sair</button>';
-            infoDiv.classList.remove('hidden');
-            document.getElementById('userNameDisplay').innerText = user.nome;
-            document.getElementById('userEmailDisplay').innerText = user.email;
-            await loadProjects();
-            return true;
-        } else {
-            window.location.href = 'login.html';
-            return false;
-        }
-    } catch(e) {
-        window.location.href = 'login.html';
-        return false;
-    }
-}
-
-window.logout = function() {
-    localStorage.clear();
-    window.location.href = 'login.html';
-};
-
-// Carregar projetos
-async function loadProjects() {
-    try {
-        const res = await req('/studio/projetos');
-        projetos = await res.json();
-        if (projetos.length === 0) {
-            await createProject('Meu Projeto');
-            await loadProjects();
-        } else {
-            currentProjectId = projetos[0].id;
-            currentProjectName = projetos[0].nome;
-            await loadFiles();
-        }
-        updateSelector();
-    } catch(e) { console.error(e); }
-}
-
-// Criar projeto
-async function createProject(nome) {
-    const res = await req('/studio/projetos', { method: 'POST', body: JSON.stringify({ nome }) });
-    const data = await res.json();
-    if (data.success) {
-        const defaults = {
-            'index.html': '<h1>Ola mundo</h1><p>Bem vindo!</p>',
-            'style.css': 'body { font-family: Arial; text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; }',
-            'script.js': 'console.log("Projeto carregado!");'
-        };
-        for (const [path, content] of Object.entries(defaults)) {
-            await req('/studio/projetos/' + data.id + '/arquivos', { method: 'POST', body: JSON.stringify({ caminho: path, conteudo: content }) });
-        }
-    }
-}
-
-// Carregar arquivos
-async function loadFiles() {
-    const res = await req('/studio/projetos/' + currentProjectId + '/arquivos');
-    const files = await res.json();
-    arquivos = {};
-    files.forEach(f => { arquivos[f.caminho] = f.conteudo; });
-    
-    try {
-        const resPasta = await req('/studio/projetos/' + currentProjectId + '/pastas');
-        pastas = await resPasta.json();
-    } catch(e) { pastas = []; }
-    
-    renderTree();
-    
-    if (arquivos[currentFilePath]) {
-        codeEditor.value = arquivos[currentFilePath];
-    } else if (arquivos['index.html']) {
-        currentFilePath = 'index.html';
-        codeEditor.value = arquivos['index.html'];
-    } else if (Object.keys(arquivos).length > 0) {
-        currentFilePath = Object.keys(arquivos)[0];
-        codeEditor.value = arquivos[currentFilePath];
-    }
-    
-    updateHeader();
-    updatePreview();
-}
-
-// Salvar arquivo - VERSÃO OTIMIZADA (sem recarregar a árvore)
-async function saveFile(path, content) {
-    await req('/studio/projetos/' + currentProjectId + '/arquivos', { method: 'POST', body: JSON.stringify({ caminho: path, conteudo: content }) });
-    arquivos[path] = content;
-}
-
-// Salvar com debounce - evita salvar a cada letra
-function debouncedSave() {
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        if (currentFilePath && arquivos[currentFilePath] !== undefined) {
-            const newContent = codeEditor.value;
-            if (arquivos[currentFilePath] !== newContent) {
-                saveFile(currentFilePath, newContent);
-            }
-        }
-    }, 500); // Salva 500ms após a última digitação
-}
-
-function updatePreview() {
-    const html = arquivos['index.html'] || '<h1>Sem conteudo</h1>';
-    const css = '<style>' + (arquivos['style.css'] || '') + '</style>';
-    const js = '<script>' + (arquivos['script.js'] || '') + '<\/script>';
-    preview.srcdoc = html + css + js;
-}
-
-function updateHeader() {
-    document.getElementById('currentFileName').innerText = currentFilePath || 'Nenhum arquivo';
-    if (currentFilePath.endsWith('.html')) document.getElementById('currentFileMeta').innerText = 'Tipo: HTML';
-    else if (currentFilePath.endsWith('.css')) document.getElementById('currentFileMeta').innerText = 'Tipo: CSS';
-    else if (currentFilePath.endsWith('.js')) document.getElementById('currentFileMeta').innerText = 'Tipo: JavaScript';
-    else if (currentFilePath.endsWith('.py')) document.getElementById('currentFileMeta').innerText = 'Tipo: Python';
-    else document.getElementById('currentFileMeta').innerText = 'Tipo: Texto';
-}
-
-function updateSelector() {
-    const sel = document.getElementById('projectSelector');
-    sel.innerHTML = '';
-    projetos.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.innerText = p.nome;
-        if (p.id === currentProjectId) opt.selected = true;
-        sel.appendChild(opt);
-    });
-    document.getElementById('currentProjectBadge').innerText = 'Projeto: ' + currentProjectName;
-}
-
-// Funcao openFile - SEM recarregar a árvore inteira
-window.openFile = function(path) {
-    if (arquivos[path]) {
-        currentFilePath = path;
-        codeEditor.value = arquivos[path];
-        updateHeader();
-        highlightActiveFile();
-    } else {
-        const fileName = path.split('/').pop();
-        const found = Object.keys(arquivos).find(p => p === path || p.endsWith('/' + fileName) || p === fileName);
-        
-        if (found) {
-            currentFilePath = found;
-            codeEditor.value = arquivos[found];
-            updateHeader();
-            highlightActiveFile();
-        } else {
-            alert('Arquivo não encontrado: ' + path);
-        }
-    }
-};
-
-// Destacar arquivo ativo sem recriar a árvore
-function highlightActiveFile() {
-    const allFiles = document.querySelectorAll('.tree-item.tree-file');
-    allFiles.forEach(el => el.classList.remove('active'));
-    
-    const currentFileName = currentFilePath.split('/').pop();
-    const fileElements = document.querySelectorAll('.tree-item.tree-file');
-    for (let el of fileElements) {
-        const label = el.querySelector('.tree-label');
-        if (label && label.innerText.includes(currentFileName)) {
-            el.classList.add('active');
-            break;
-        }
-    }
-}
-
-// Renderizar arvore - apenas uma vez
-function renderTree() {
-    fileTree.innerHTML = '';
-    
-    const filesInFolders = {};
-    const rootFiles = [];
-    
-    Object.keys(arquivos).forEach(path => {
-        if (path.includes('/')) {
-            const folder = path.split('/')[0];
-            if (!filesInFolders[folder]) filesInFolders[folder] = [];
-            filesInFolders[folder].push(path);
-        } else {
-            rootFiles.push(path);
-        }
-    });
-    
-    const allFolders = [...new Set([...Object.keys(filesInFolders), ...pastas.map(p => p.nome)])].sort();
-    
-    allFolders.forEach(folder => {
-        const div = document.createElement('div');
-        div.className = 'tree-item tree-folder';
-        
-        const folderRow = document.createElement('div');
-        folderRow.className = 'tree-row';
-        
-        const folderLabel = document.createElement('div');
-        folderLabel.className = 'tree-label';
-        folderLabel.innerHTML = '📁 ' + folder;
-        folderLabel.style.cursor = 'pointer';
-        folderLabel.onclick = () => toggleFolder(folder);
-        
-        const folderActions = document.createElement('div');
-        folderActions.className = 'tree-actions';
-        
-        const addBtn = document.createElement('button');
-        addBtn.className = 'mini-btn';
-        addBtn.innerHTML = '+';
-        addBtn.onclick = () => createFileInFolder(folder);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'mini-btn mini-danger';
-        deleteBtn.innerHTML = 'X';
-        deleteBtn.onclick = () => deleteFolder(folder);
-        
-        folderActions.appendChild(addBtn);
-        folderActions.appendChild(deleteBtn);
-        folderRow.appendChild(folderLabel);
-        folderRow.appendChild(folderActions);
-        div.appendChild(folderRow);
-        
-        const filesContainer = document.createElement('div');
-        filesContainer.className = 'folder-files';
-        filesContainer.id = 'folder-' + folder;
-        filesContainer.style.display = 'block';
-        
-        const folderFiles = filesInFolders[folder] || [];
-        folderFiles.sort().forEach(path => {
-            const name = path.split('/').pop();
-            const fileDiv = document.createElement('div');
-            fileDiv.className = 'tree-item tree-file' + (currentFilePath === path ? ' active' : '');
-            
-            const fileRow = document.createElement('div');
-            fileRow.className = 'tree-row';
-            
-            const fileLabel = document.createElement('div');
-            fileLabel.className = 'tree-label';
-            fileLabel.innerHTML = '📄 ' + name;
-            fileLabel.style.cursor = 'pointer';
-            fileLabel.onclick = (function(p) { return function() { openFile(p); }; })(path);
-            
-            const fileActions = document.createElement('div');
-            fileActions.className = 'tree-actions';
-            
-            const renameBtn = document.createElement('button');
-            renameBtn.className = 'mini-btn mini-warning';
-            renameBtn.innerHTML = 'R';
-            renameBtn.onclick = (function(p) { return function(e) { e.stopPropagation(); renameFile(p); }; })(path);
-            
-            const deleteFileBtn = document.createElement('button');
-            deleteFileBtn.className = 'mini-btn mini-danger';
-            deleteFileBtn.innerHTML = 'X';
-            deleteFileBtn.onclick = (function(p) { return function(e) { e.stopPropagation(); deleteFile(p); }; })(path);
-            
-            fileActions.appendChild(renameBtn);
-            fileActions.appendChild(deleteFileBtn);
-            fileRow.appendChild(fileLabel);
-            fileRow.appendChild(fileActions);
-            fileDiv.appendChild(fileRow);
-            filesContainer.appendChild(fileDiv);
-        });
-        
-        div.appendChild(filesContainer);
-        fileTree.appendChild(div);
-    });
-    
-    rootFiles.sort().forEach(path => {
-        const div = document.createElement('div');
-        div.className = 'tree-item tree-file' + (currentFilePath === path ? ' active' : '');
-        
-        const row = document.createElement('div');
-        row.className = 'tree-row';
-        
-        const label = document.createElement('div');
-        label.className = 'tree-label';
-        label.innerHTML = '📄 ' + path;
-        label.style.cursor = 'pointer';
-        label.onclick = (function(p) { return function() { openFile(p); }; })(path);
-        
-        const actions = document.createElement('div');
-        actions.className = 'tree-actions';
-        
-        const renameBtn = document.createElement('button');
-        renameBtn.className = 'mini-btn mini-warning';
-        renameBtn.innerHTML = 'R';
-        renameBtn.onclick = (function(p) { return function(e) { e.stopPropagation(); renameFile(p); }; })(path);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'mini-btn mini-danger';
-        deleteBtn.innerHTML = 'X';
-        deleteBtn.onclick = (function(p) { return function(e) { e.stopPropagation(); deleteFile(p); }; })(path);
-        
-        actions.appendChild(renameBtn);
-        actions.appendChild(deleteBtn);
-        row.appendChild(label);
-        row.appendChild(actions);
-        div.appendChild(row);
-        
-        fileTree.appendChild(div);
-    });
-    
-    updateHeader();
-}
-
-// Funcoes de pasta
-window.toggleFolder = function(folder) {
-    const el = document.getElementById('folder-' + folder);
-    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-};
-
-// Funcoes de arquivo
-window.deleteFile = async function(path) {
-    if (confirm('Excluir ' + path + '?')) {
-        await req('/studio/projetos/' + currentProjectId + '/arquivos/' + encodeURIComponent(path), { method: 'DELETE' });
-        delete arquivos[path];
-        if (currentFilePath === path) currentFilePath = 'index.html';
-        await loadFiles();
-    }
-};
-
-window.renameFile = async function(path) {
-    const newName = prompt('Novo nome:', path.split('/').pop());
-    if (newName && newName !== path.split('/').pop()) {
-        const parts = path.split('/');
-        parts.pop();
-        const newPath = parts.length ? parts.join('/') + '/' + newName : newName;
-        const content = arquivos[path];
-        await saveFile(newPath, content);
-        await req('/studio/projetos/' + currentProjectId + '/arquivos/' + encodeURIComponent(path), { method: 'DELETE' });
-        delete arquivos[path];
-        if (currentFilePath === path) currentFilePath = newPath;
-        await loadFiles();
-    }
-};
-
-window.createFileInFolder = async function(folder) {
-    const name = prompt('Nome do arquivo (ex: novo.html):');
-    if (name && name.includes('.')) {
-        const path = folder + '/' + name;
-        if (arquivos[path]) { alert('Ja existe!'); return; }
-        
-        let conteudo = '';
-        const ext = name.split('.').pop().toLowerCase();
-        if (ext === 'html') conteudo = '<h1>Novo arquivo em ' + folder + '</h1>';
-        else if (ext === 'css') conteudo = '/* Novo CSS em ' + folder + ' */';
-        else if (ext === 'js') conteudo = 'console.log("Novo arquivo em ' + folder + '");';
-        else if (ext === 'py') conteudo = 'print("Olá Python em ' + folder + '!")';
-        
-        await saveFile(path, conteudo);
-        await loadFiles();
-        openFile(path);
-    } else if (name) alert('Precisa de extensao!');
-};
-
-window.deleteFolder = async function(folder) {
-    const filesInFolder = Object.keys(arquivos).filter(f => f.startsWith(folder + '/'));
-    if (filesInFolder.length > 0) {
-        alert('Pasta nao vazia! Exclua os arquivos primeiro.');
-        return;
-    }
-    if (confirm('Excluir pasta ' + folder + '?')) {
-        await req('/studio/projetos/' + currentProjectId + '/pastas', { method: 'DELETE', body: JSON.stringify({ nome: folder }) });
-        await loadFiles();
-    }
-};
-
-// Acoes principais
-async function createFile() {
-    const name = prompt('Nome do arquivo (ex: novo.html):');
-    if (name && name.includes('.')) {
-        if (arquivos[name]) { alert('Ja existe!'); return; }
-        
-        let conteudo = '';
-        const ext = name.split('.').pop().toLowerCase();
-        if (ext === 'html') conteudo = '<h1>Novo arquivo</h1>';
-        else if (ext === 'css') conteudo = '/* Novo CSS */';
-        else if (ext === 'js') conteudo = 'console.log("Novo arquivo");';
-        else if (ext === 'py') conteudo = 'print("Olá Python!")';
-        
-        await saveFile(name, conteudo);
-        await loadFiles();
-        openFile(name);
-    } else if (name) alert('Precisa de extensao!');
-}
-
-async function createFolder() {
-    const name = prompt('Nome da pasta:');
-    if (name && name.trim()) {
-        if (pastas.some(p => p.nome === name)) { alert('Ja existe!'); return; }
-        await req('/studio/projetos/' + currentProjectId + '/pastas', { method: 'POST', body: JSON.stringify({ nome: name.trim() }) });
-        await loadFiles();
-    }
-}
-
-async function newProject() {
-    const name = prompt('Nome do projeto:');
-    if (name) {
-        await createProject(name);
-        await loadProjects();
-    }
-}
-
-async function renameProject() {
-    const newName = prompt('Novo nome:', currentProjectName);
-    if (newName && newName !== currentProjectName) {
-        await req('/studio/projetos/' + currentProjectId, { method: 'PUT', body: JSON.stringify({ nome: newName }) });
-        await loadProjects();
-    }
-}
-
-async function deleteProject() {
-    if (confirm('Excluir projeto?')) {
-        await req('/studio/projetos/' + currentProjectId, { method: 'DELETE' });
-        await loadProjects();
-    }
-}
-
-async function resetProject() {
-    if (confirm('Resetar projeto?')) {
-        const defaults = {
-            'index.html': '<h1>Resetado</h1><p>Projeto resetado!</p>',
-            'style.css': 'body{text-align:center;padding:40px;}',
-            'script.js': 'console.log("Resetado");'
-        };
-        for (const [path, content] of Object.entries(defaults)) {
-            await saveFile(path, content);
-        }
-        await loadFiles();
-    }
-}
-
-function copyCode() {
-    navigator.clipboard.writeText(codeEditor.value);
-    alert('Copiado!');
-}
-
-function clearFile() {
-    if (confirm('Limpar arquivo?')) {
-        codeEditor.value = '';
-        debouncedSave();
-        updatePreview();
-    }
-}
-
-function run() {
-    debouncedSave();
-    if (currentFilePath.endsWith('.py')) {
-        openTerminal();
-        runPython();
-    } else {
-        updatePreview();
-    }
-}
-
-function openMainFiles() {
-    if (arquivos['index.html']) openFile('index.html');
-    else alert('index.html nao encontrado!');
-}
-
-// Terminal
-function openTerminal() {
-    if (!currentFilePath.endsWith('.py')) { alert('Abra um arquivo .py!'); return; }
-    document.getElementById('terminalPanel').classList.add('active');
-    const out = document.getElementById('terminalOutput');
-    if (out.innerHTML.trim() === '') out.innerHTML = '<div class="terminal-line terminal-info">Terminal pronto</div>';
-}
-
-function runPython() {
-    if (!currentFilePath.endsWith('.py')) { alert('Abra um arquivo .py!'); return; }
-    const out = document.getElementById('terminalOutput');
-    out.innerHTML += '<div class="terminal-line terminal-info">>>> Executando...</div>';
-    const code = codeEditor.value;
-    const lines = code.split('\n');
-    for (let line of lines) {
-        const match = line.trim().match(/^print\s*\((.*)\)\s*$/);
-        if (match) {
-            let text = match[1].trim();
-            if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
-                text = text.slice(1, -1);
-            }
-            out.innerHTML += '<div class="terminal-line terminal-success">' + text + '</div>';
-        }
-    }
-    out.innerHTML += '<div class="terminal-line terminal-info">>>> Finalizado</div>';
-    out.scrollTop = out.scrollHeight;
-}
-
-function clearTerminal() {
-    document.getElementById('terminalOutput').innerHTML = '<div class="terminal-line terminal-info">Terminal limpo</div>';
-}
-
-function closeTerminal() {
-    document.getElementById('terminalPanel').classList.remove('active');
-}
-
-// Modal
-function openModal() {
-    document.getElementById('userModal').classList.add('show');
-    document.getElementById('modalOverlay').classList.add('show');
-}
-function closeModal() {
-    document.getElementById('userModal').classList.remove('show');
-    document.getElementById('modalOverlay').classList.remove('show');
-}
-
-// Debug
-window.debugState = function() {
-    alert('Projeto: ' + currentProjectName + '\nArquivos: ' + Object.keys(arquivos).length);
-};
-
-// Eventos
-document.getElementById('newProjectBtn').onclick = newProject;
-document.getElementById('renameProjectBtn').onclick = renameProject;
-document.getElementById('deleteProjectBtn').onclick = deleteProject;
-document.getElementById('createFolderBtn').onclick = createFolder;
-document.getElementById('createFileBtn').onclick = createFile;
-document.getElementById('renameFileBtn').onclick = () => renameFile(currentFilePath);
-document.getElementById('deleteFileBtn').onclick = () => deleteFile(currentFilePath);
-document.getElementById('runBtn').onclick = run;
-document.getElementById('refreshPreviewBtn').onclick = updatePreview;
-document.getElementById('openMainFilesBtn').onclick = openMainFiles;
-document.getElementById('copyBtn').onclick = copyCode;
-document.getElementById('clearBtn').onclick = clearFile;
-document.getElementById('resetBtn').onclick = resetProject;
-document.getElementById('openTerminalBtn').onclick = openTerminal;
-document.getElementById('runPythonBtn').onclick = runPython;
-document.getElementById('clearTerminalBtn').onclick = clearTerminal;
-document.getElementById('closeTerminalBtn').onclick = closeTerminal;
-document.getElementById('openUserModalBtn').onclick = openModal;
-document.getElementById('closeModalBtn').onclick = closeModal;
-document.getElementById('modalOverlay').onclick = closeModal;
-
-// CORREÇÃO PRINCIPAL: usar debouncedSave em vez de saveCurrent direto
-codeEditor.oninput = debouncedSave;
-
-document.getElementById('prevProjectBtn').onclick = async () => {
-    const idx = projetos.findIndex(p => p.id === currentProjectId);
-    const prev = projetos[idx <= 0 ? projetos.length - 1 : idx - 1];
-    if (prev) {
-        currentProjectId = prev.id;
-        currentProjectName = prev.nome;
-        await loadFiles();
-        updateSelector();
-    }
-};
-
-document.getElementById('nextProjectBtn').onclick = async () => {
-    const idx = projetos.findIndex(p => p.id === currentProjectId);
-    const next = projetos[idx >= projetos.length - 1 ? 0 : idx + 1];
-    if (next) {
-        currentProjectId = next.id;
-        currentProjectName = next.nome;
-        await loadFiles();
-        updateSelector();
-    }
-};
-
-document.getElementById('projectSelector').onchange = async (e) => {
-    const proj = projetos.find(p => p.id == e.target.value);
-    if (proj) {
-        currentProjectId = proj.id;
-        currentProjectName = proj.nome;
-        await loadFiles();
-        updateSelector();
-    }
-};
-
-// Iniciar
-checkLogin();
-</script>
+    <script src="../js/editor.js"></script>
 </body>
+
 </html>

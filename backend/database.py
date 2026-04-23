@@ -485,3 +485,91 @@ def delete_pasta(self, projeto_id, user_id, nome_pasta):
             WHERE projeto_id = ? AND user_id = ? AND nome = ?
         ''', (projeto_id, user_id, nome_pasta))
         conn.commit()
+
+# ========== OPERAÇÕES DO CHAT ==========
+
+def get_chats(self, user_id):
+    """Obtém todos os chats do usuário"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, titulo, created_at, updated_at 
+            FROM chats 
+            WHERE user_id = ? 
+            ORDER BY updated_at DESC
+        ''', (user_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+def create_chat(self, user_id, titulo='Nova Conversa'):
+    """Cria um novo chat"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO chats (user_id, titulo) 
+            VALUES (?, ?)
+        ''', (user_id, titulo))
+        return cursor.lastrowid
+
+def delete_chat(self, chat_id, user_id):
+    """Deleta um chat e todas suas mensagens"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM chats WHERE id = ? AND user_id = ?', (chat_id, user_id))
+
+def get_mensagens_chat(self, chat_id, user_id):
+    """Obtém todas as mensagens de um chat"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, role, content, created_at 
+            FROM mensagens_chat 
+            WHERE chat_id = ? AND user_id = ? 
+            ORDER BY created_at ASC
+        ''', (chat_id, user_id))
+        return [dict(row) for row in cursor.fetchall()]
+
+def save_mensagem(self, chat_id, user_id, role, content):
+    """Salva uma mensagem no chat"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO mensagens_chat (chat_id, user_id, role, content) 
+            VALUES (?, ?, ?, ?)
+        ''', (chat_id, user_id, role, content))
+        
+        # Atualizar o updated_at do chat
+        cursor.execute('''
+            UPDATE chats SET updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ? AND user_id = ?
+        ''', (chat_id, user_id))
+
+def update_chat_titulo(self, chat_id, user_id, titulo):
+    """Atualiza o título do chat baseado na primeira mensagem"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE chats SET titulo = ? 
+            WHERE id = ? AND user_id = ?
+        ''', (titulo[:50], chat_id, user_id))
+
+def save_api_key(self, user_id, provider, api_key):
+    """Salva a chave API do usuário"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO api_keys (user_id, provider, api_key) 
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, provider) 
+            DO UPDATE SET api_key = ?, updated_at = CURRENT_TIMESTAMP
+        ''', (user_id, provider, api_key, api_key))
+
+def get_api_key(self, user_id, provider):
+    """Obtém a chave API do usuário"""
+    with self.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT api_key FROM api_keys 
+            WHERE user_id = ? AND provider = ?
+        ''', (user_id, provider))
+        row = cursor.fetchone()
+        return row['api_key'] if row else None

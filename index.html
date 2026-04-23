@@ -7,7 +7,7 @@
   <title>EvolveGlobal | Tecnologia como Ascensão Social</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
   <style>
-       * {
+    * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
@@ -664,18 +664,19 @@
         font-size: 2.3rem;
       }
     }
+
     /* Adicione estas correções no final do CSS */
     .user-info-header {
       display: flex;
       align-items: center;
       gap: 15px;
     }
-    
+
     .user-welcome {
       color: white;
       font-size: 0.9rem;
     }
-    
+
     .btn-logout-nav {
       padding: 8px 16px;
       border: none;
@@ -687,17 +688,17 @@
       transition: 0.3s ease;
       font-size: 0.9rem;
     }
-    
+
     .btn-logout-nav:hover {
       transform: scale(1.05);
       box-shadow: 0 8px 20px rgba(255, 77, 77, 0.3);
     }
-    
+
     /* Esconder botão de logout antigo */
     .btn-logout {
       display: none;
     }
-    
+
     /* Ajuste para o header */
     .nav-container {
       display: flex;
@@ -705,7 +706,7 @@
       justify-content: space-between;
       gap: 20px;
     }
-    
+
     @media (max-width: 768px) {
       .user-info-header {
         position: absolute;
@@ -717,10 +718,171 @@
         flex-direction: column;
         display: none;
       }
-      
+
       .user-info-header.active {
         display: flex;
       }
+    }
+
+    /* Estilo do bot - CORRIGIDO */
+    .bot {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .bot a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      text-decoration: none;
+    }
+
+    .bot a:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .bot i {
+      color: white;
+      font-size: 30px;
+      transition: transform 0.3s ease;
+    }
+
+    .bot a:hover i {
+      transform: scale(1.05);
+    }
+
+    /* Garantir que o bot apareça */
+    .bot {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    /* Para dispositivos móveis */
+    @media (max-width: 768px) {
+      .bot {
+        bottom: 20px;
+        right: 20px;
+      }
+
+      .bot a {
+        width: 50px;
+        height: 50px;
+      }
+
+      .bot i {
+        font-size: 24px;
+      }
+    }
+
+    /* ==================== MODAL ==================== */
+    .user-info_modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #252526;
+      border-radius: 8px;
+      padding: 24px;
+      width: 90%;
+      max-width: 380px;
+      z-index: 1000;
+      display: none;
+      color: #cccccc;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .user-info_modal.show {
+      display: block;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+      display: none;
+    }
+
+    .modal-overlay.show {
+      display: block;
+    }
+
+    .user-info_modal .user-name {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .user-info_modal .user-name span {
+      font-size: 20px;
+      font-weight: 600;
+      color: #007acc;
+    }
+
+    .user-info_modal .user-image {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .user-info_modal .user-image img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid #007acc;
+    }
+
+    .user-info_modal .user-info p {
+      margin: 8px 0;
+      color: #cccccc;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #a1260d;
+      color: white;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .debug-panel {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      background: #2d2d2d;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      opacity: 0.6;
+      z-index: 999;
+      font-family: monospace;
+    }
+
+    .debug-panel:hover {
+      opacity: 1;
     }
   </style>
 </head>
@@ -744,8 +906,20 @@
           <li><a href="#contato">Contato</a></li>
           <li><a href="./templates/criando.html">Aprender</a></li>
           <li><a href="./templates/estudo.html">Estudos</a></li>
+          <button id="openUserModalBtn">👤 Info</button>
         </ul>
       </nav>
+
+      <div class="modal-overlay" id="modalOverlay"></div>
+      <div class="user-info_modal" id="userModal">
+        <button class="close-modal" id="closeModalBtn">×</button>
+        <div class="user-name"><span id="userNameDisplay"></span></div>
+        <div class="user-image"><img id="userImageDisplay" src="" alt="User"></div>
+        <div class="user-info">
+          <p id="userEmailDisplay"></p>
+        </div>
+      </div>
+
 
       <div class="user-info-header" id="userInfoHeader">
         <span class="user-welcome" id="userNameDisplay"></span>
@@ -753,7 +927,8 @@
       </div>
 
       <div class="img-header">
-        <img src="./images/foto_evolve.png" alt="Logo EvolveGlobal" width="90" style="border-radius: 50%; padding: 5px;">
+        <img src="./images/foto_evolve.png" alt="Logo EvolveGlobal" width="90"
+          style="border-radius: 50%; padding: 5px;">
       </div>
     </div>
   </header>
@@ -795,12 +970,13 @@
 
   <div class="bot">
     <a href="./templates/chat.html">
-      <i class="bi bi-robot" id="robot-chat"></i>
+      <i class="bi bi-robot" id="robot-chat">
+      </i>
     </a>
   </div>
 
   <!-- Seu conteúdo existente (Pilares, Impacto, Contexto, Stats, CTA) permanece igual -->
-  
+
   <!-- PILARES -->
   <section class="section pilares" id="pilares">
     <div class="container">
@@ -977,21 +1153,21 @@
   <script>
     // Configuração da API
     const API_URL = 'http://localhost:5000/api';
-    
+
     // ================================
     // VERIFICA AUTENTICAÇÃO COM BACKEND
     // ================================
     async function verificarAutenticacao() {
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      
+
       if (!token || !user.id) {
         // Não está logado, redirecionar para login
         alert("Você precisa fazer login primeiro!");
         window.location.href = "login.html";
         return false;
       }
-      
+
       try {
         // Verificar se o token é válido no backend
         const response = await fetch(`${API_URL}/verificar-token`, {
@@ -999,7 +1175,7 @@
             'Authorization': token
           }
         });
-        
+
         if (!response.ok) {
           // Token inválido ou expirado
           localStorage.removeItem("token");
@@ -1008,11 +1184,11 @@
           window.location.href = "login.html";
           return false;
         }
-        
+
         // Token válido, mostrar informações do usuário
         mostrarInfoUsuario(user);
         return true;
-        
+
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         // Se não conseguir conectar ao backend, ainda assim permite acesso
@@ -1022,33 +1198,51 @@
         return true;
       }
     }
-    
+
+    document.getElementById('openUserModalBtn')?.addEventListener('click', openModal);
+    document.getElementById('closeModalBtn')?.addEventListener('click', closeModal);
+
+    // ==================== MODAL ====================
+function openModal() {
+    const modal = document.getElementById('userModal');
+    const overlay = document.getElementById('modalOverlay');
+    if (modal) modal.classList.add('show');
+    if (overlay) overlay.classList.add('show');
+}
+
+function closeModal() {
+    const modal = document.getElementById('userModal');
+    const overlay = document.getElementById('modalOverlay');
+    if (modal) modal.classList.remove('show');
+    if (overlay) overlay.classList.remove('show');
+}
+
     function mostrarInfoUsuario(user) {
       // Mostrar nome do usuário no header
       const userNameDisplay = document.getElementById("userNameDisplay");
       if (userNameDisplay && user.nome) {
         userNameDisplay.textContent = `Olá, ${user.nome.split(' ')[0]}`;
       }
-      
+
       // Esconder seção de login/cadastro
       const authSection = document.getElementById("log");
       if (authSection) {
         authSection.style.display = "none";
       }
-      
+
       // Mostrar informações do usuário no header
       const userInfoHeader = document.getElementById("userInfoHeader");
       if (userInfoHeader) {
         userInfoHeader.style.display = "flex";
       }
     }
-    
+
     // ================================
     // FUNÇÃO DE LOGOUT
     // ================================
     async function logout() {
       const token = localStorage.getItem("token");
-      
+
       if (token) {
         try {
           // Tentar fazer logout no backend
@@ -1062,43 +1256,43 @@
           console.error("Erro no logout do backend:", error);
         }
       }
-      
+
       // Limpar dados locais
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("logado"); // Compatibilidade com versão antiga
-      
+
       alert("Você saiu da conta.");
       window.location.href = "login.html";
     }
-    
+
     // =========================
     // ANIMAÇÃO AO ROLAR
     // =========================
     const revealElements = document.querySelectorAll(".reveal");
-    
+
     function revealOnScroll() {
       const triggerBottom = window.innerHeight - 100;
-      
+
       revealElements.forEach((element) => {
         const elementTop = element.getBoundingClientRect().top;
-        
+
         if (elementTop < triggerBottom) {
           element.classList.add("active");
         }
       });
     }
-    
+
     window.addEventListener("scroll", revealOnScroll);
     window.addEventListener("load", revealOnScroll);
-    
+
     // =========================
     // MENU MOBILE
     // =========================
     const menuBtn = document.getElementById("menuBtn");
     const navMenu = document.getElementById("navMenu");
     const userInfoHeader = document.getElementById("userInfoHeader");
-    
+
     if (menuBtn && navMenu) {
       menuBtn.addEventListener("click", () => {
         navMenu.classList.toggle("active");
@@ -1106,7 +1300,7 @@
           userInfoHeader.classList.toggle("active");
         }
       });
-      
+
       // Fecha menu ao clicar em um link
       const navLinks = navMenu.querySelectorAll("a");
       navLinks.forEach((link) => {
@@ -1118,31 +1312,31 @@
         });
       });
     }
-    
+
     // =========================
     // CONTADOR ANIMADO
     // =========================
     const counters = document.querySelectorAll(".counter");
     let countersStarted = false;
-    
+
     function startCounters() {
       if (countersStarted) return;
-      
+
       const statsSection = document.querySelector(".stats");
       if (!statsSection) return;
-      
+
       const sectionTop = statsSection.getBoundingClientRect().top;
       const triggerPoint = window.innerHeight - 100;
-      
+
       if (sectionTop < triggerPoint) {
         counters.forEach((counter) => {
           const target = +counter.getAttribute("data-target");
           let current = 0;
           const increment = Math.max(1, Math.ceil(target / 100));
-          
+
           const updateCounter = () => {
             current += increment;
-            
+
             if (current < target) {
               counter.innerText = current;
               requestAnimationFrame(updateCounter);
@@ -1150,49 +1344,49 @@
               counter.innerText = target;
             }
           };
-          
+
           updateCounter();
         });
-        
+
         countersStarted = true;
       }
     }
-    
+
     window.addEventListener("scroll", startCounters);
     window.addEventListener("load", startCounters);
-    
+
     // =========================
     // BOT DE CHAT
     // =========================
     function simpleMovingBot() {
       const bot = document.querySelector('.bot');
       if (!bot) return;
-      
+
       let lastScrollY = window.scrollY;
       let ticking = false;
-      
+
       function updateBotPosition() {
         const currentScrollY = window.scrollY;
         const scrollDelta = currentScrollY - lastScrollY;
-        
+
         const moveLimit = 50;
         let moveAmount = Math.min(Math.abs(scrollDelta), moveLimit);
-        
+
         if (scrollDelta > 0) {
           bot.style.transform = `translateY(-${moveAmount * 0.3}px)`;
         } else if (scrollDelta < 0) {
           bot.style.transform = `translateY(${moveAmount * 0.3}px)`;
         }
-        
+
         lastScrollY = currentScrollY;
         ticking = false;
-        
+
         clearTimeout(window.resetTimeout);
         window.resetTimeout = setTimeout(() => {
           bot.style.transform = 'translateY(0)';
         }, 200);
       }
-      
+
       window.addEventListener('scroll', () => {
         if (!ticking) {
           requestAnimationFrame(updateBotPosition);
@@ -1200,22 +1394,22 @@
         }
       });
     }
-    
+
     function addPulseEffect() {
       const bot = document.querySelector('.bot a');
       if (!bot) return;
-      
+
       setInterval(() => {
         bot.style.animation = 'none';
         bot.offsetHeight;
         bot.style.animation = 'pulse 0.5s ease';
-        
+
         setTimeout(() => {
           if (bot) bot.style.animation = '';
         }, 500);
       }, 30000);
     }
-    
+
     // Adicionar animação de pulso ao CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -1235,13 +1429,13 @@
       }
     `;
     document.head.appendChild(style);
-    
+
     // Inicializar
     simpleMovingBot();
     setTimeout(() => {
       addPulseEffect();
     }, 2000);
-    
+
     // Verificar autenticação ao carregar a página
     verificarAutenticacao();
   </script>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatBot Evolve_Global - Nosso Assistente Inteligente</title>
+    <title>ChatBot Evolve_Global - Assistente Gemini AI</title>
 
     <style>
         * {
@@ -18,6 +18,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             overflow: hidden;
@@ -26,7 +27,7 @@
         .chat-container {
             width: 90%;
             max-width: 600px;
-            height: 90vh;
+            height: 85vh;
             max-height: 700px;
             background: white;
             border-radius: 20px;
@@ -78,6 +79,72 @@
             font-size: 0.7rem;
             font-weight: bold;
             white-space: nowrap;
+        }
+
+        .chat-sidebar {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .new-chat-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .chats-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            display: none;
+        }
+
+        .chats-list.show {
+            display: block;
+        }
+
+        .chat-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-item:hover {
+            background: #e9ecef;
+        }
+
+        .chat-item.active {
+            background: #667eea20;
+            border-left: 3px solid #667eea;
+        }
+
+        .chat-item-title {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .delete-chat-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 5px;
+        }
+
+        .delete-chat-btn:hover {
+            color: #f44336;
         }
 
         .chat-messages {
@@ -167,51 +234,6 @@
             }
         }
 
-        .api-key-panel {
-            padding: 14px 20px;
-            background: #f7f8fc;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .api-key-input {
-            display: none !important;
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #cfd8e3;
-            border-radius: 25px;
-            font-size: 0.95rem;
-            outline: none;
-            font-family: inherit;
-        }
-
-        .save-api-button {
-            display: none !important;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            padding: 12px 22px;
-            cursor: pointer;
-            font-size: 0.95rem;
-            transition: background 0.2s;
-        }
-
-        .save-api-button:hover {
-            background: #5a6dd3;
-        }
-
-        .api-status {
-            width: 100%;
-            color: #555;
-            font-size: 0.82rem;
-            text-align: center;
-            margin-top: 6px;
-        }
-
         .chat-input-container {
             padding: 20px;
             background: white;
@@ -273,10 +295,20 @@
             background: #d32f2f;
         }
 
+        .toggle-chats-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
         @media (max-width: 768px) {
             .chat-container {
                 width: 95%;
-                height: 95vh;
+                height: 90vh;
             }
             .message-content {
                 max-width: 85%;
@@ -284,10 +316,7 @@
         }
         
         .footer {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            margin-top: 10px;
         }
 
         .btn-voltar button {
@@ -308,21 +337,23 @@
         <div class="chat-header">
             <h2>🤖 Assistente Gemini AI | Evolve Global</h2>
             <p>Powered by Google Gemini 2.5 Flash Lite</p>
-            <div class="status">Online</div>
+            <div class="status" id="statusIndicator">✅ Online</div>
         </div>
 
-        <div class="api-key-panel">
-            <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Chave da API Google Gemini"
-                autocomplete="off">
-            <button class="save-api-button" id="saveApiKeyButton">Salvar chave</button>
-            <div class="api-status" id="apiStatus">✅ API pré-configurada! Pronto para usar.</div>
+        <div class="chat-sidebar">
+            <button class="new-chat-btn" id="newChatBtn">+ Nova Conversa</button>
+            <button class="toggle-chats-btn" id="toggleChatsBtn">📋 Histórico</button>
+        </div>
+
+        <div class="chats-list" id="chatsList">
+            <!-- Histórico de chats será carregado aqui -->
         </div>
 
         <div class="chat-messages" id="chatMessages">
             <div class="message bot">
                 <div class="message-content">
                     Olá! 👋 Sou o Assistente Gemini AI da Evolve Global.<br><br>
-                    Como posso ajudar?<br><br>
+                    Como posso ajudar você hoje?<br><br>
                 </div>
             </div>
         </div>
@@ -336,340 +367,322 @@
     </div>
     <div class="footer">
         <div class="btn-voltar">
-            <button onclick="window.location.href='index.html'">← Voltar</button>
+            <button onclick="window.location.href='/index.html'">← Voltar</button>
         </div>
     </div>
 
     <script>
-        // CHAVE API DO GMEINI AI
-        const DEFAULT_API_KEY = "AIzaSyCfd-GXQcvr7T-waJh6WOqi3jAxLMTH2Qk";
+        // Configuração
+        const API_URL = 'http://localhost:5000/api';
         
-        
-        class ChatBot {
-            constructor() {
-                this.messagesContainer = document.getElementById('chatMessages');
-                this.messageInput = document.getElementById('messageInput');
-                this.sendButton = document.getElementById('sendButton');
-                this.clearButton = document.getElementById('clearButton');
-                this.saveApiKeyButton = document.getElementById('saveApiKeyButton');
-                this.apiKeyInput = document.getElementById('apiKeyInput');
-                this.apiStatus = document.getElementById('apiStatus');
+        // Variáveis globais
+        let currentChatId = null;
+        let chats = [];
+        let isTyping = false;
+        let lastMessageTime = 0;
 
-                this.conversationHistory = [];
-                this.isTyping = false;
-                this.apiKey = '';
-                this.lastMessageTime = 0;
-                this.waitTime = 0;
-                this.waitInterval = null;
-                this.workingModel = null;
+        // Elementos
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const toggleChatsBtn = document.getElementById('toggleChatsBtn');
+        const chatsList = document.getElementById('chatsList');
+        const statusIndicator = document.getElementById('statusIndicator');
 
-                this.init();
+        // ==================== FUNÇÕES DE API ====================
+        async function apiRequest(endpoint, options = {}) {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': token,
+                ...options.headers
+            };
+            
+            const response = await fetch(`${API_URL}${endpoint}`, {
+                ...options,
+                headers
+            });
+            
+            if (response.status === 401) {
+                window.location.href = 'login.html';
+                throw new Error('Sessão expirada');
             }
+            
+            return response;
+        }
 
-            init() {
-                // Tentar carregar chave salva primeiro
-                let savedKey = localStorage.getItem('geminiApiKey');
+        // ==================== CHATS ====================
+        async function loadChats() {
+            try {
+                const response = await apiRequest('/chat/chats');
+                chats = await response.json();
+                renderChatsList();
                 
-                // Se não tiver chave salva, usar a chave padrão (se configurada)
-                if (!savedKey && DEFAULT_API_KEY && DEFAULT_API_KEY !== "AIzaSyCfd-GXQcvr7T-waJh6WOqi3jAxLMTH2Qk") {
-                    savedKey = DEFAULT_API_KEY;
-                    localStorage.setItem('geminiApiKey', savedKey);
+                if (chats.length === 0) {
+                    await createNewChat();
+                } else if (!currentChatId) {
+                    await loadChatMessages(chats[0].id);
                 }
-                
-                if (savedKey) {
-                    this.apiKey = savedKey;
-                    this.apiKeyInput.value = '***************';
-                    this.apiStatus.textContent = '✅ Gemini AI conectado! Pronto para conversar.';
-                    this.apiStatus.style.color = '#4caf50';
-                    
-                    // Testar conexão automaticamente
-                    setTimeout(() => this.testConnection(), 500);
-                } else {
-                    this.apiStatus.textContent = '⚠️ Configure sua chave API ou edite o código com a chave padrão.';
-                    this.apiStatus.style.color = '#ff9800';
-                }
-
-                this.sendButton.onclick = () => this.sendMessage();
-                this.clearButton.onclick = () => this.clearChat();
-                this.saveApiKeyButton.onclick = () => this.saveApiKey();
-
-                this.messageInput.onkeypress = (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        this.sendMessage();
-                    }
-                };
-
-                this.messageInput.oninput = () => {
-                    this.messageInput.style.height = 'auto';
-                    this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 100) + 'px';
-                };
-            }
-
-            async sendMessage() {
-                const message = this.messageInput.value.trim();
-
-                if (!message) return;
-                if (!this.apiKey) {
-                    this.addMessage("⚠️ Por favor, configure sua chave da API Gemini primeiro.\n\n🔑 Obtenha uma chave gratuita em: https://aistudio.google.com/app/apikey", 'bot');
-                    return;
-                }
-                if (this.isTyping) return;
-
-                if (this.waitTime > 0) {
-                    this.addMessage(`⏳ Aguarde ${this.waitTime} segundos antes de enviar outra mensagem.`, 'bot');
-                    return;
-                }
-
-                const now = Date.now();
-                const timeSinceLastMessage = (now - this.lastMessageTime) / 1000;
-                
-                if (this.lastMessageTime > 0 && timeSinceLastMessage < 15) {
-                    const remainingWait = Math.ceil(15 - timeSinceLastMessage);
-                    this.addMessage(`⏳ Por favor, aguarde ${remainingWait} segundos entre as mensagens.`, 'bot');
-                    return;
-                }
-
-                this.addMessage(message, 'user');
-                this.messageInput.value = '';
-                this.messageInput.style.height = 'auto';
-
-                this.conversationHistory.push({ role: "user", parts: [{ text: message }] });
-
-                this.showTypingIndicator();
-                this.isTyping = true;
-                this.sendButton.disabled = true;
-
-                try {
-                    const response = await this.askGemini(message);
-                    this.addMessage(response, 'bot');
-                    this.conversationHistory.push({ role: "model", parts: [{ text: response }] });
-                    this.lastMessageTime = Date.now();
-                } catch (error) {
-                    console.error('Erro:', error);
-                    
-                    // Mensagem de erro mais amigável
-                    let errorMsg = error.message;
-                    if (errorMsg.includes('API key not valid') || errorMsg.includes('invalid')) {
-                        errorMsg = 'Chave API inválida. Verifique sua chave no Google AI Studio.';
-                        this.apiStatus.textContent = '❌ Chave inválida! Corrija no campo acima.';
-                        this.apiStatus.style.color = '#f44336';
-                    } else if (errorMsg.includes('quota')) {
-                        errorMsg = 'Limite de uso gratuito excedido. Aguarde alguns minutos ou tente uma nova chave.';
-                    }
-                    
-                    this.addMessage(`❌ ${errorMsg}`, 'bot');
-                    
-                    const match = error.message.match(/Please retry in ([0-9.]+)s/);
-                    if (match) {
-                        const waitSeconds = Math.ceil(parseFloat(match[1]));
-                        this.startWaitTimer(waitSeconds);
-                    }
-                } finally {
-                    this.removeTypingIndicator();
-                    this.isTyping = false;
-                    this.sendButton.disabled = false;
-                }
-
-                if (this.conversationHistory.length > 20) {
-                    this.conversationHistory = this.conversationHistory.slice(-20);
-                }
-            }
-
-            startWaitTimer(seconds) {
-                this.waitTime = seconds;
-                this.sendButton.disabled = true;
-                
-                this.addMessage(`⏳ API sobrecarregada. Aguardando ${seconds} segundos para nova tentativa...`, 'bot');
-                
-                this.waitInterval = setInterval(() => {
-                    this.waitTime--;
-                    
-                    if (this.waitTime <= 0) {
-                        clearInterval(this.waitInterval);
-                        this.waitInterval = null;
-                        this.sendButton.disabled = false;
-                        this.addMessage(`✅ Período de espera concluído! Você já pode enviar novas mensagens.`, 'bot');
-                    }
-                }, 1000);
-            }
-
-            async askGemini(message, retryCount = 0) {
-                const modelsToTry = this.workingModel 
-                    ? [this.workingModel] 
-                    : [
-                        'gemini-2.5-flash-lite',
-                        'gemini-2.5-flash',
-                        'gemini-2.0-flash-lite'
-                      ];
-                
-                let lastError = null;
-                
-                for (const model of modelsToTry) {
-                    try {
-                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
-
-                        const contents = this.conversationHistory.length > 0
-                            ? this.conversationHistory
-                            : [{ role: "user", parts: [{ text: message }] }];
-
-                        const requestBody = {
-                            contents: contents,
-                            generationConfig: {
-                                temperature: 0.7,
-                                maxOutputTokens: 800,
-                                topP: 0.95,
-                            }
-                        };
-
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(requestBody)
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok) {
-                            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (text) {
-                                if (!this.workingModel) {
-                                    this.workingModel = model;
-                                    console.log(`✅ Modelo funcionando: ${model}`);
-                                }
-                                return text;
-                            }
-                        } else if (response.status === 429) {
-                            const errorMsg = data.error?.message || '';
-                            const match = errorMsg.match(/Please retry in ([0-9.]+)s/);
-                            if (match && retryCount === 0) {
-                                const waitSeconds = parseFloat(match[1]);
-                                this.startWaitTimer(Math.ceil(waitSeconds));
-                                throw new Error(errorMsg);
-                            }
-                            lastError = errorMsg;
-                        } else {
-                            lastError = data.error?.message || 'Erro desconhecido';
-                            console.log(`❌ Modelo ${model} falhou: ${lastError}`);
-                        }
-                    } catch (error) {
-                        lastError = error.message;
-                    }
-                }
-                
-                throw new Error(lastError || 'Nenhum modelo disponível. Verifique sua chave API.');
-            }
-
-            saveApiKey() {
-                const key = this.apiKeyInput.value.trim();
-
-                if (!key) {
-                    localStorage.removeItem('geminiApiKey');
-                    this.apiKey = '';
-                    this.workingModel = null;
-                    this.apiStatus.textContent = '⚠️ Chave removida. Insira uma nova chave para continuar.';
-                    this.apiStatus.style.color = '#ff9800';
-                    this.apiKeyInput.value = '';
-                    return;
-                }
-
-                if (!key.startsWith('AIza')) {
-                    this.apiStatus.textContent = '❌ Chave inválida! A chave Gemini deve começar com "AIza"';
-                    this.apiStatus.style.color = '#f44336';
-                    return;
-                }
-
-                localStorage.setItem('geminiApiKey', key);
-                this.apiKey = key;
-                this.workingModel = null;
-                this.apiStatus.textContent = '✅ Chave salva! Testando conexão...';
-                this.apiStatus.style.color = '#ff9800';
-                this.apiKeyInput.value = '***************';
-
-                this.testConnection();
-            }
-
-            async testConnection() {
-                try {
-                    const testResponse = await this.askGemini("Responda apenas 'Conectado' se você receber esta mensagem.");
-                    this.apiStatus.textContent = '✅ Gemini AI conectado com sucesso!';
-                    this.apiStatus.style.color = '#4caf50';
-                    this.addMessage(`✅ Conexão estabelecida com sucesso! Uso atual: ${this.workingModel || 'Gemini 2.5 Flash Lite'}\n\nComo posso ajudar você hoje? 😊`, 'bot');
-                } catch (error) {
-                    this.apiStatus.textContent = `❌ Erro de conexão: ${error.message.substring(0, 80)}`;
-                    this.apiStatus.style.color = '#f44336';
-                    this.addMessage(`❌ Falha na conexão: ${error.message}\n\nVerifique se sua chave está correta e tente novamente.`, 'bot');
-                }
-            }
-
-            addMessage(text, sender) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${sender}`;
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'message-content';
-
-                let formattedText = text.replace(/\n/g, '<br>');
-                formattedText = formattedText.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#667eea;">$1</a>');
-                contentDiv.innerHTML = formattedText;
-
-                messageDiv.appendChild(contentDiv);
-                this.messagesContainer.appendChild(messageDiv);
-                this.scrollToBottom();
-                return messageDiv;
-            }
-
-            showTypingIndicator() {
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'message bot';
-                typingDiv.id = 'typingIndicator';
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'message-content';
-                contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-                typingDiv.appendChild(contentDiv);
-                this.messagesContainer.appendChild(typingDiv);
-                this.scrollToBottom();
-            }
-
-            removeTypingIndicator() {
-                const indicator = document.getElementById('typingIndicator');
-                if (indicator) indicator.remove();
-            }
-
-            clearChat() {
-                this.messagesContainer.innerHTML = '';
-                this.conversationHistory = [];
-                this.lastMessageTime = 0;
-                
-                if (this.waitInterval) {
-                    clearInterval(this.waitInterval);
-                    this.waitInterval = null;
-                    this.waitTime = 0;
-                    this.sendButton.disabled = false;
-                }
-
-                const initialMessage = document.createElement('div');
-                initialMessage.className = 'message bot';
-                initialMessage.innerHTML = `
-                    <div class="message-content">
-                        💬 Chat limpo! Como posso ajudar você hoje?<br><br>
-                        🧠 Gemini AI - Modelo ativo: ${this.workingModel || 'Gemini 2.5 Flash Lite'}<br>
-                        ⏰ Aguarde 15 segundos entre cada mensagem.
-                    </div>
-                `;
-                this.messagesContainer.appendChild(initialMessage);
-                this.scrollToBottom();
-            }
-
-            scrollToBottom() {
-                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            } catch (error) {
+                console.error('Erro ao carregar chats:', error);
             }
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            window.chatBot = new ChatBot();
-        });
+        async function createNewChat() {
+            try {
+                const response = await apiRequest('/chat/chats', {
+                    method: 'POST',
+                    body: JSON.stringify({ titulo: 'Nova Conversa' })
+                });
+                const data = await response.json();
+                await loadChats();
+                await loadChatMessages(data.id);
+            } catch (error) {
+                console.error('Erro ao criar chat:', error);
+            }
+        }
+
+        async function loadChatMessages(chatId) {
+            try {
+                const response = await apiRequest(`/chat/chats/${chatId}/mensagens`);
+                const mensagens = await response.json();
+                
+                currentChatId = chatId;
+                messagesContainer.innerHTML = '';
+                
+                if (mensagens.length === 0) {
+                    addMessage('Olá! 👋 Sou o Assistente Gemini AI da Evolve Global.\n\nComo posso ajudar você hoje?', 'bot');
+                } else {
+                    mensagens.forEach(msg => {
+                        addMessage(msg.content, msg.role);
+                    });
+                }
+                
+                highlightActiveChat();
+                scrollToBottom();
+            } catch (error) {
+                console.error('Erro ao carregar mensagens:', error);
+            }
+        }
+
+        async function sendMessageToBot(message) {
+            try {
+                const response = await apiRequest('/chat/send', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        message: message,
+                        chat_id: currentChatId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (!currentChatId) {
+                        currentChatId = data.chat_id;
+                        await loadChats();
+                    }
+                    return data.response;
+                } else {
+                    throw new Error(data.error || 'Erro ao enviar mensagem');
+                }
+            } catch (error) {
+                console.error('Erro ao enviar mensagem:', error);
+                throw error;
+            }
+        }
+
+        async function deleteChat(chatId) {
+            if (!confirm('Tem certeza que deseja excluir esta conversa?')) return;
+            
+            try {
+                await apiRequest(`/chat/chats/${chatId}`, { method: 'DELETE' });
+                await loadChats();
+                
+                if (chats.length > 0) {
+                    await loadChatMessages(chats[0].id);
+                } else {
+                    await createNewChat();
+                }
+            } catch (error) {
+                console.error('Erro ao deletar chat:', error);
+            }
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function renderChatsList() {
+            chatsList.innerHTML = '';
+            chats.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = 'chat-item';
+                chatItem.dataset.id = chat.id;
+                chatItem.innerHTML = `
+                    <div class="chat-item-title">${chat.titulo}</div>
+                    <button class="delete-chat-btn" data-id="${chat.id}">🗑️</button>
+                `;
+                chatItem.querySelector('.chat-item-title').onclick = () => loadChatMessages(chat.id);
+                chatItem.querySelector('.delete-chat-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                };
+                chatsList.appendChild(chatItem);
+            });
+        }
+
+        function highlightActiveChat() {
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id == currentChatId) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            let formattedText = text.replace(/\n/g, '<br>');
+            formattedText = formattedText.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#667eea;">$1</a>');
+            contentDiv.innerHTML = formattedText;
+
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            typingDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function clearChat() {
+            if (confirm('Limpar todas as mensagens desta conversa?')) {
+                messagesContainer.innerHTML = '';
+                addMessage('💬 Chat limpo! Como posso ajudar você hoje?', 'bot');
+            }
+        }
+
+        // ==================== SEND MESSAGE ====================
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+
+            if (!message) return;
+            if (isTyping) return;
+
+            const now = Date.now();
+            const timeSinceLastMessage = (now - lastMessageTime) / 1000;
+            
+            if (lastMessageTime > 0 && timeSinceLastMessage < 15) {
+                const remainingWait = Math.ceil(15 - timeSinceLastMessage);
+                addMessage(`⏳ Aguarde ${remainingWait} segundos entre as mensagens.`, 'bot');
+                return;
+            }
+
+            // Mostrar mensagem do usuário
+            addMessage(message, 'user');
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            showTypingIndicator();
+            isTyping = true;
+            sendButton.disabled = true;
+
+            try {
+                const response = await sendMessageToBot(message);
+                removeTypingIndicator();
+                addMessage(response, 'bot');
+                lastMessageTime = Date.now();
+                
+                // Recarregar chats para atualizar título se necessário
+                await loadChats();
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage(`❌ ${error.message}`, 'bot');
+            } finally {
+                isTyping = false;
+                sendButton.disabled = false;
+                scrollToBottom();
+            }
+        }
+
+        // ==================== EVENTOS ====================
+        newChatBtn.onclick = createNewChat;
+        clearButton.onclick = clearChat;
+        sendButton.onclick = sendMessage;
+        
+        toggleChatsBtn.onclick = () => {
+            chatsList.classList.toggle('show');
+            toggleChatsBtn.textContent = chatsList.classList.contains('show') ? '📋 Ocultar' : '📋 Histórico';
+        };
+
+        messageInput.onkeypress = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+
+        messageInput.oninput = () => {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
+        };
+
+        // ==================== VERIFICAR LOGIN ====================
+        async function checkLogin() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/verificar-token`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                if (!response.ok) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+
+        // ==================== INICIAR ====================
+        async function init() {
+            const loggedIn = await checkLogin();
+            if (!loggedIn) return;
+            
+            await loadChats();
+        }
+        
+        init();
     </script>
 </body>
 

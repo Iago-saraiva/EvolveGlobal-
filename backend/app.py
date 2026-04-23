@@ -7,13 +7,16 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 import hashlib
 import time
-import os
+import requests
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 CORS(app, supports_credentials=True, origins=['*'])
 
-# ========== BANCO DE DADOS COM MANEJO DE LOCK ==========
+GEMINI_API_KEY = "AIzaSyALGqQrg0DV1oN6m4OVv0QbDMzsvpi1bxA" #CHAVE API
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+
+# ========== BANCO DE DADOS ==========
 
 class Database:
     def __init__(self, db_name='evolveglobal.db'):
@@ -22,31 +25,19 @@ class Database:
     
     @contextmanager
     def get_connection(self):
-        """Obtém uma conexão com timeout e retry automático"""
-        max_retries = 5
-        retry_delay = 0.1
-        
-        for attempt in range(max_retries):
-            try:
-                # Timeout de 20 segundos para esperar o lock
-                conn = sqlite3.connect(self.db_name, timeout=20.0)
-                conn.row_factory = sqlite3.Row
-                # Configurações para melhor concorrência
-                conn.execute('PRAGMA journal_mode=WAL')
-                conn.execute('PRAGMA synchronous=NORMAL')
-                conn.execute('PRAGMA cache_size=10000')
-                yield conn
-                conn.commit()
-                break
-            except sqlite3.OperationalError as e:
-                if "database is locked" in str(e) and attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                raise e
-            finally:
-                if 'conn' in locals():
-                    conn.close()
+        conn = None
+        try:
+            conn = sqlite3.connect(self.db_name, timeout=30.0)
+            conn.row_factory = sqlite3.Row
+            yield conn
+            conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            raise e
+        finally:
+            if conn:
+                conn.close()
     
     def init_db(self):
         with self.get_connection() as conn:
@@ -176,11 +167,51 @@ class Database:
                 )
             ''')
             
+            # ========== TABELAS DO CHAT ==========
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS chats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    titulo TEXT DEFAULT 'Nova Conversa',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS mensagens_chat (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    chat_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    provider TEXT NOT NULL,
+                    api_key TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+                    UNIQUE(user_id, provider)
+                )
+            ''')
+            
             # Índices
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_email ON usuarios(email)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_token ON tokens(token)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_projetos_user ON projetos(user_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_arquivos_projeto ON arquivos(projeto_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_chats_user ON chats(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_mensagens_chat ON mensagens_chat(chat_id)')
             
             print("✅ Banco de dados inicializado com sucesso!")
     
@@ -412,6 +443,94 @@ class Database:
             cursor.execute('DELETE FROM materiais WHERE user_id = ?', (user_id,))
             cursor.execute('DELETE FROM anotacoes WHERE user_id = ?', (user_id,))
             cursor.execute('DELETE FROM stats_estudos WHERE user_id = ?', (user_id,))
+    
+    # ========== OPERAÇÕES DO CHAT ==========
+    
+    def get_chats(self, user_id):
+        """Obtém todos os chats do usuário"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, titulo, created_at, updated_at 
+                FROM chats 
+                WHERE user_id = ? 
+                ORDER BY updated_at DESC
+            ''', (user_id,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def create_chat(self, user_id, titulo='Nova Conversa'):
+        """Cria um novo chat"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO chats (user_id, titulo) 
+                VALUES (?, ?)
+            ''', (user_id, titulo))
+            return cursor.lastrowid
+
+    def delete_chat(self, chat_id, user_id):
+        """Deleta um chat e todas suas mensagens"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM chats WHERE id = ? AND user_id = ?', (chat_id, user_id))
+
+    def get_mensagens_chat(self, chat_id, user_id):
+        """Obtém todas as mensagens de um chat"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, role, content, created_at 
+                FROM mensagens_chat 
+                WHERE chat_id = ? AND user_id = ? 
+                ORDER BY created_at ASC
+            ''', (chat_id, user_id))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def save_mensagem(self, chat_id, user_id, role, content):
+        """Salva uma mensagem no chat"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO mensagens_chat (chat_id, user_id, role, content) 
+                VALUES (?, ?, ?, ?)
+            ''', (chat_id, user_id, role, content))
+            
+            # Atualizar o updated_at do chat
+            cursor.execute('''
+                UPDATE chats SET updated_at = CURRENT_TIMESTAMP 
+                WHERE id = ? AND user_id = ?
+            ''', (chat_id, user_id))
+
+    def update_chat_titulo(self, chat_id, user_id, titulo):
+        """Atualiza o título do chat baseado na primeira mensagem"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE chats SET titulo = ? 
+                WHERE id = ? AND user_id = ?
+            ''', (titulo[:50], chat_id, user_id))
+
+    def save_api_key(self, user_id, provider, api_key):
+        """Salva a chave API do usuário"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO api_keys (user_id, provider, api_key) 
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id, provider) 
+                DO UPDATE SET api_key = ?, updated_at = CURRENT_TIMESTAMP
+            ''', (user_id, provider, api_key, api_key))
+
+    def get_api_key(self, user_id, provider):
+        """Obtém a chave API do usuário"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT api_key FROM api_keys 
+                WHERE user_id = ? AND provider = ?
+            ''', (user_id, provider))
+            row = cursor.fetchone()
+            return row['api_key'] if row else None
 
 # ========== AUTENTICAÇÃO ==========
 
@@ -805,6 +924,141 @@ def reset_estudos():
     db.reset_dados_estudos(user_id)
     return jsonify({'success': True, 'message': 'Dados resetados com sucesso'}), 200
 
+# ========== ROTAS DO CHAT ==========
+
+@app.route('/api/chat/chats', methods=['GET'])
+@login_required
+def get_chats():
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    chats = db.get_chats(user_id)
+    return jsonify(chats), 200
+
+@app.route('/api/chat/chats', methods=['POST'])
+@login_required
+def create_chat():
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    data = request.json
+    titulo = data.get('titulo', 'Nova Conversa')
+    chat_id = db.create_chat(user_id, titulo)
+    return jsonify({'id': chat_id, 'success': True}), 201
+
+@app.route('/api/chat/chats/<int:chat_id>', methods=['DELETE'])
+@login_required
+def delete_chat(chat_id):
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    db.delete_chat(chat_id, user_id)
+    return jsonify({'success': True}), 200
+
+@app.route('/api/chat/chats/<int:chat_id>/mensagens', methods=['GET'])
+@login_required
+def get_mensagens(chat_id):
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    mensagens = db.get_mensagens_chat(chat_id, user_id)
+    return jsonify(mensagens), 200
+
+@app.route('/api/chat/chats/<int:chat_id>/mensagens', methods=['POST'])
+@login_required
+def save_mensagem(chat_id):
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    data = request.json
+    db.save_mensagem(chat_id, user_id, data['role'], data['content'])
+    return jsonify({'success': True}), 200
+
+@app.route('/api/chat/chats/<int:chat_id>/titulo', methods=['PUT'])
+@login_required
+def update_chat_titulo(chat_id):
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    data = request.json
+    db.update_chat_titulo(chat_id, user_id, data['titulo'])
+    return jsonify({'success': True}), 200
+
+@app.route('/api/chat/send', methods=['POST'])
+@login_required
+def send_message():
+    """Rota para enviar mensagem e receber resposta do Gemini"""
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    data = request.json
+    message = data.get('message', '')
+    chat_id = data.get('chat_id')
+    
+    if not message:
+        return jsonify({'error': 'Mensagem vazia'}), 400
+    
+    if not chat_id:
+        # Criar novo chat se não existir
+        chat_id = db.create_chat(user_id)
+    
+    # Salvar mensagem do usuário
+    db.save_mensagem(chat_id, user_id, 'user', message)
+    
+    try:
+        # Chamar API do Gemini
+        response = call_gemini_api(message)
+        
+        # Salvar resposta do bot
+        db.save_mensagem(chat_id, user_id, 'bot', response)
+        
+        # Atualizar título se for a primeira mensagem
+        chats = db.get_chats(user_id)
+        current_chat = next((c for c in chats if c['id'] == chat_id), None)
+        if current_chat and current_chat['titulo'] == 'Nova Conversa':
+            new_title = message[:40] + ('...' if len(message) > 40 else '')
+            db.update_chat_titulo(chat_id, user_id, new_title)
+        
+        return jsonify({
+            'success': True,
+            'chat_id': chat_id,
+            'response': response
+        }), 200
+        
+    except Exception as e:
+        print(f"Erro no Gemini: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def call_gemini_api(message):
+    """Função para chamar a API do Gemini"""
+    url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": message}]
+        }],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 800,
+            "topP": 0.95
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        data = response.json()
+        
+        if response.status_code == 200:
+            # Extrair o texto da resposta
+            text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+            if text:
+                return text
+            else:
+                return "Desculpe, não consegui processar sua solicitação."
+        else:
+            error_msg = data.get('error', {}).get('message', 'Erro desconhecido')
+            print(f"Erro Gemini API: {error_msg}")
+            return f"Erro na API: {error_msg}"
+            
+    except requests.exceptions.Timeout:
+        return "A requisição demorou muito. Tente novamente."
+    except Exception as e:
+        print(f"Erro na chamada Gemini: {e}")
+        return "Ocorreu um erro ao processar sua mensagem."
+    
 # ========== ROTA DE DEBUG ==========
 
 @app.route('/api/studio/projetos/<int:projeto_id>/arquivos/debug', methods=['GET'])
@@ -833,17 +1087,14 @@ if __name__ == '__main__':
     print("   GET    /api/verificar-token")
     print("   GET    /api/studio/projetos")
     print("   POST   /api/studio/projetos")
-    print("   PUT    /api/studio/projetos/<id>")
-    print("   DELETE /api/studio/projetos/<id>")
-    print("   GET    /api/studio/projetos/<id>/arquivos")
-    print("   POST   /api/studio/projetos/<id>/arquivos")
-    print("   DELETE /api/studio/projetos/<id>/arquivos/<path>")
-    print("   GET    /api/studio/projetos/<id>/pastas")
-    print("   POST   /api/studio/projetos/<id>/pastas")
-    print("   DELETE /api/studio/projetos/<id>/pastas")
+    print("   GET    /api/chat/chats")
+    print("   POST   /api/chat/chats")
+    print("   GET    /api/chat/chats/<id>/mensagens")
+    print("   POST   /api/chat/chats/<id>/mensagens")
+    print("   GET    /api/chat/api-key")
+    print("   POST   /api/chat/api-key")
     print("\n" + "="*50)
     print("🔥 Servidor rodando em http://localhost:5000")
     print("="*50 + "\n")
     
-    # Usar threaded=True para melhor concorrência
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
