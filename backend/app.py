@@ -1,542 +1,167 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 from functools import wraps
 import secrets
-import sqlite3
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 import hashlib
-import time
-import requests
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Criar pasta para dados persistentes
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Configuração do banco de dados
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(16))
+
+# Configuração do CORS
 CORS(app, supports_credentials=True, origins=['*'])
 
-GEMINI_API_KEY = "AIzaSyALGqQrg0DV1oN6m4OVv0QbDMzsvpi1bxA" #CHAVE API
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+# Configuração do banco de dados SQLite
+database_url = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(DATA_DIR, "evolveglobal.db")}')
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'check_same_thread': False},
+    'pool_size': 1,  # SQLite só suporta uma conexão por vez
+    'pool_recycle': 3600,
+}
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ========== BANCO DE DADOS ==========
+# Inicializar banco de dados
+db.init_app(app)
 
-class Database:
-    def __init__(self, db_name='evolveglobal.db'):
-        self.db_name = db_name
-        self.init_db()
-    
-    @contextmanager
-    def get_connection(self):
-        conn = None
-        try:
-            conn = sqlite3.connect(self.db_name, timeout=30.0)
-            conn.row_factory = sqlite3.Row
-            yield conn
-            conn.commit()
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            raise e
-        finally:
-            if conn:
-                conn.close()
-    
-    def init_db(self):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Tabela de usuários
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS usuarios (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    senha_hash TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Tabela de tokens
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS tokens (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    token TEXT UNIQUE NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    expires_at TIMESTAMP,
-                    revoked BOOLEAN DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            # Tabela de projetos
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS projetos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    nome TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE,
-                    UNIQUE(user_id, nome)
-                )
-            ''')
-            
-            # Tabela de pastas
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pastas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    projeto_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    nome TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (projeto_id) REFERENCES projetos (id) ON DELETE CASCADE,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE,
-                    UNIQUE(projeto_id, user_id, nome)
-                )
-            ''')
-            
-            # Tabela de arquivos
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS arquivos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    projeto_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    caminho TEXT NOT NULL,
-                    conteudo TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (projeto_id) REFERENCES projetos (id) ON DELETE CASCADE,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE,
-                    UNIQUE(projeto_id, user_id, caminho)
-                )
-            ''')
-            
-            # Tabelas de estudos
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS tarefas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    text TEXT NOT NULL,
-                    subject TEXT NOT NULL,
-                    completed BOOLEAN DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS metas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    text TEXT NOT NULL,
-                    completed BOOLEAN DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS materiais (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    name TEXT NOT NULL,
-                    link TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS anotacoes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER UNIQUE NOT NULL,
-                    content TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS stats_estudos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER UNIQUE NOT NULL,
-                    study_minutes_today INTEGER DEFAULT 0,
-                    pomodoro_sessions INTEGER DEFAULT 0,
-                    last_update DATE,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            # ========== TABELAS DO CHAT ==========
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS chats (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    titulo TEXT DEFAULT 'Nova Conversa',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS mensagens_chat (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    chat_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    role TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS api_keys (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    provider TEXT NOT NULL,
-                    api_key TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE,
-                    UNIQUE(user_id, provider)
-                )
-            ''')
-            
-            # Índices
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_email ON usuarios(email)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_token ON tokens(token)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_projetos_user ON projetos(user_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_arquivos_projeto ON arquivos(projeto_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_chats_user ON chats(user_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_mensagens_chat ON mensagens_chat(chat_id)')
-            
-            print("✅ Banco de dados inicializado com sucesso!")
-    
-    # ========== OPERAÇÕES DE USUÁRIO ==========
-    
-    def create_user(self, nome, email, senha_hash):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                'INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)',
-                (nome, email, senha_hash)
-            )
-            return cursor.lastrowid
-    
-    def get_user_by_email(self, email):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE email = ?', (email,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    
-    def get_user_by_id(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE id = ?', (user_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    
-    def save_token(self, token, user_id, expires_at=None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                'INSERT INTO tokens (token, user_id, expires_at) VALUES (?, ?, ?)',
-                (token, user_id, expires_at)
-            )
-            return cursor.lastrowid
-    
-    def get_token(self, token):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM tokens WHERE token = ? AND revoked = 0', (token,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    
-    def revoke_token(self, token):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('UPDATE tokens SET revoked = 1 WHERE token = ?', (token,))
-    
-    # ========== OPERAÇÕES DE PROJETOS ==========
-    
-    def get_projetos(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT id, nome, created_at, updated_at FROM projetos WHERE user_id = ? ORDER BY updated_at DESC', (user_id,))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def create_projeto(self, user_id, nome):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO projetos (user_id, nome) VALUES (?, ?)', (user_id, nome))
-            return cursor.lastrowid
-    
-    def update_projeto(self, projeto_id, user_id, novo_nome):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('UPDATE projetos SET nome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', (novo_nome, projeto_id, user_id))
-    
-    def delete_projeto(self, projeto_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM projetos WHERE id = ? AND user_id = ?', (projeto_id, user_id))
-    
-    # ========== OPERAÇÕES DE ARQUIVOS ==========
-    
-    def get_arquivos(self, projeto_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT caminho, conteudo FROM arquivos WHERE projeto_id = ? AND user_id = ?', (projeto_id, user_id))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def get_arquivo(self, projeto_id, user_id, caminho):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT conteudo FROM arquivos WHERE projeto_id = ? AND user_id = ? AND caminho = ?', (projeto_id, user_id, caminho))
-            row = cursor.fetchone()
-            return row['conteudo'] if row else None
-    
-    def save_arquivo(self, projeto_id, user_id, caminho, conteudo):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO arquivos (projeto_id, user_id, caminho, conteudo) 
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(projeto_id, user_id, caminho) 
-                DO UPDATE SET conteudo = ?, updated_at = CURRENT_TIMESTAMP
-            ''', (projeto_id, user_id, caminho, conteudo, conteudo))
-    
-    def delete_arquivo(self, projeto_id, user_id, caminho):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM arquivos WHERE projeto_id = ? AND user_id = ? AND caminho = ?', (projeto_id, user_id, caminho))
-    
-    # ========== OPERAÇÕES DE PASTAS ==========
-    
-    def get_pastas(self, projeto_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT nome FROM pastas WHERE projeto_id = ? AND user_id = ?', (projeto_id, user_id))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def create_pasta(self, projeto_id, user_id, nome):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO pastas (projeto_id, user_id, nome) VALUES (?, ?, ?)', (projeto_id, user_id, nome))
-    
-    def delete_pasta(self, projeto_id, user_id, nome):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM pastas WHERE projeto_id = ? AND user_id = ? AND nome = ?', (projeto_id, user_id, nome))
-    
-    # ========== OPERAÇÕES DE ESTUDOS ==========
-    
-    def get_tarefas(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM tarefas WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def create_tarefa(self, user_id, text, subject, completed=False):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO tarefas (user_id, text, subject, completed) VALUES (?, ?, ?, ?)', (user_id, text, subject, completed))
-            return cursor.lastrowid
-    
-    def update_tarefa(self, tarefa_id, completed):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('UPDATE tarefas SET completed = ? WHERE id = ?', (completed, tarefa_id))
-    
-    def delete_tarefa(self, tarefa_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM tarefas WHERE id = ? AND user_id = ?', (tarefa_id, user_id))
-    
-    def get_metas(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM metas WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def create_meta(self, user_id, text, completed=False):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO metas (user_id, text, completed) VALUES (?, ?, ?)', (user_id, text, completed))
-            return cursor.lastrowid
-    
-    def update_meta(self, meta_id, completed):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('UPDATE metas SET completed = ? WHERE id = ?', (completed, meta_id))
-    
-    def delete_meta(self, meta_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM metas WHERE id = ? AND user_id = ?', (meta_id, user_id))
-    
-    def get_materiais(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM materiais WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def create_material(self, user_id, name, link):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO materiais (user_id, name, link) VALUES (?, ?, ?)', (user_id, name, link))
-            return cursor.lastrowid
-    
-    def delete_material(self, material_id, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM materiais WHERE id = ? AND user_id = ?', (material_id, user_id))
-    
-    def get_anotacoes(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT content FROM anotacoes WHERE user_id = ?', (user_id,))
-            row = cursor.fetchone()
-            return row['content'] if row else None
-    
-    def save_anotacoes(self, user_id, content):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO anotacoes (user_id, content) VALUES (?, ?)
-                ON CONFLICT(user_id) DO UPDATE SET content = ?, updated_at = CURRENT_TIMESTAMP
-            ''', (user_id, content, content))
-    
-    def get_stats(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM stats_estudos WHERE user_id = ?', (user_id,))
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return {'study_minutes_today': 0, 'pomodoro_sessions': 0}
-    
-    def update_stats(self, user_id, stats_data):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO stats_estudos (user_id, study_minutes_today, pomodoro_sessions, last_update)
-                VALUES (?, ?, ?, DATE('now'))
-                ON CONFLICT(user_id) DO UPDATE SET
-                    study_minutes_today = ?,
-                    pomodoro_sessions = ?,
-                    last_update = DATE('now')
-            ''', (user_id, stats_data.get('study_minutes_today', 0), 
-                  stats_data.get('pomodoro_sessions', 0),
-                  stats_data.get('study_minutes_today', 0),
-                  stats_data.get('pomodoro_sessions', 0)))
-    
-    def reset_dados_estudos(self, user_id):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM tarefas WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM metas WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM materiais WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM anotacoes WHERE user_id = ?', (user_id,))
-            cursor.execute('DELETE FROM stats_estudos WHERE user_id = ?', (user_id,))
-    
-    # ========== OPERAÇÕES DO CHAT ==========
-    
-    def get_chats(self, user_id):
-        """Obtém todos os chats do usuário"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, titulo, created_at, updated_at 
-                FROM chats 
-                WHERE user_id = ? 
-                ORDER BY updated_at DESC
-            ''', (user_id,))
-            return [dict(row) for row in cursor.fetchall()]
+# ========== MODELOS ==========
 
-    def create_chat(self, user_id, titulo='Nova Conversa'):
-        """Cria um novo chat"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO chats (user_id, titulo) 
-                VALUES (?, ?)
-            ''', (user_id, titulo))
-            return cursor.lastrowid
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    senha_hash = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
-    def delete_chat(self, chat_id, user_id):
-        """Deleta um chat e todas suas mensagens"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM chats WHERE id = ? AND user_id = ?', (chat_id, user_id))
+class Token(db.Model):
+    __tablename__ = 'tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(200), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    expires_at = db.Column(db.DateTime)
+    revoked = db.Column(db.Boolean, default=False)
 
-    def get_mensagens_chat(self, chat_id, user_id):
-        """Obtém todas as mensagens de um chat"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, role, content, created_at 
-                FROM mensagens_chat 
-                WHERE chat_id = ? AND user_id = ? 
-                ORDER BY created_at ASC
-            ''', (chat_id, user_id))
-            return [dict(row) for row in cursor.fetchall()]
+class Projeto(db.Model):
+    __tablename__ = 'projetos'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    nome = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    __table_args__ = (db.UniqueConstraint('user_id', 'nome', name='unique_user_projeto'),)
 
-    def save_mensagem(self, chat_id, user_id, role, content):
-        """Salva uma mensagem no chat"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO mensagens_chat (chat_id, user_id, role, content) 
-                VALUES (?, ?, ?, ?)
-            ''', (chat_id, user_id, role, content))
-            
-            # Atualizar o updated_at do chat
-            cursor.execute('''
-                UPDATE chats SET updated_at = CURRENT_TIMESTAMP 
-                WHERE id = ? AND user_id = ?
-            ''', (chat_id, user_id))
+class Pasta(db.Model):
+    __tablename__ = 'pastas'
+    id = db.Column(db.Integer, primary_key=True)
+    projeto_id = db.Column(db.Integer, db.ForeignKey('projetos.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    nome = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    __table_args__ = (db.UniqueConstraint('projeto_id', 'user_id', 'nome', name='unique_projeto_pasta'),)
 
-    def update_chat_titulo(self, chat_id, user_id, titulo):
-        """Atualiza o título do chat baseado na primeira mensagem"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE chats SET titulo = ? 
-                WHERE id = ? AND user_id = ?
-            ''', (titulo[:50], chat_id, user_id))
+class Arquivo(db.Model):
+    __tablename__ = 'arquivos'
+    id = db.Column(db.Integer, primary_key=True)
+    projeto_id = db.Column(db.Integer, db.ForeignKey('projetos.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    caminho = db.Column(db.String(500), nullable=False)
+    conteudo = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    __table_args__ = (db.UniqueConstraint('projeto_id', 'user_id', 'caminho', name='unique_projeto_arquivo'),)
 
-    def save_api_key(self, user_id, provider, api_key):
-        """Salva a chave API do usuário"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO api_keys (user_id, provider, api_key) 
-                VALUES (?, ?, ?)
-                ON CONFLICT(user_id, provider) 
-                DO UPDATE SET api_key = ?, updated_at = CURRENT_TIMESTAMP
-            ''', (user_id, provider, api_key, api_key))
+class Tarefa(db.Model):
+    __tablename__ = 'tarefas'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    text = db.Column(db.String(500), nullable=False)
+    subject = db.Column(db.String(100), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
-    def get_api_key(self, user_id, provider):
-        """Obtém a chave API do usuário"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT api_key FROM api_keys 
-                WHERE user_id = ? AND provider = ?
-            ''', (user_id, provider))
-            row = cursor.fetchone()
-            return row['api_key'] if row else None
+class Meta(db.Model):
+    __tablename__ = 'metas'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    text = db.Column(db.String(500), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+class Material(db.Model):
+    __tablename__ = 'materiais'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    link = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+class Anotacao(db.Model):
+    __tablename__ = 'anotacoes'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), unique=True, nullable=False)
+    content = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+class StatsEstudo(db.Model):
+    __tablename__ = 'stats_estudos'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), unique=True, nullable=False)
+    study_minutes_today = db.Column(db.Integer, default=0)
+    pomodoro_sessions = db.Column(db.Integer, default=0)
+    last_update = db.Column(db.Date)
+
+class Chat(db.Model):
+    __tablename__ = 'chats'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    titulo = db.Column(db.String(100), default='Nova Conversa')
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+class MensagemChat(db.Model):
+    __tablename__ = 'mensagens_chat'
+    id = db.Column(db.Integer, primary_key=True)
+    chat_id = db.Column(db.Integer, db.ForeignKey('chats.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+class ApiKey(db.Model):
+    __tablename__ = 'api_keys'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), nullable=False)
+    provider = db.Column(db.String(50), nullable=False)
+    api_key = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    __table_args__ = (db.UniqueConstraint('user_id', 'provider', name='unique_user_provider'),)
 
 # ========== AUTENTICAÇÃO ==========
 
 class AuthManager:
-    def __init__(self, db):
-        self.db = db
+    def __init__(self):
+        pass
     
     def hash_password(self, password):
         salt = secrets.token_hex(16)
@@ -553,41 +178,44 @@ class AuthManager:
     
     def create_user(self, nome, email, senha):
         senha_hash = self.hash_password(senha)
-        return self.db.create_user(nome, email, senha_hash)
+        usuario = Usuario(nome=nome, email=email, senha_hash=senha_hash)
+        db.session.add(usuario)
+        db.session.commit()
+        return usuario.id
     
     def authenticate_user(self, email, senha):
-        user = self.db.get_user_by_email(email)
-        if user and self.verify_password(senha, user['senha_hash']):
-            return {'id': user['id'], 'nome': user['nome'], 'email': user['email']}
+        user = Usuario.query.filter_by(email=email).first()
+        if user and self.verify_password(senha, user.senha_hash):
+            return {'id': user.id, 'nome': user.nome, 'email': user.email}
         return None
     
     def generate_token(self, user_id):
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now() + timedelta(days=7)
-        self.db.save_token(token, user_id, expires_at)
+        token_obj = Token(token=token, user_id=user_id, expires_at=expires_at)
+        db.session.add(token_obj)
+        db.session.commit()
         return token
     
     def verify_token(self, token):
-        token_data = self.db.get_token(token)
+        token_data = Token.query.filter_by(token=token, revoked=False).first()
         if not token_data:
             return False
-        if token_data['expires_at']:
-            expires_at = datetime.fromisoformat(token_data['expires_at'])
-            if datetime.now() > expires_at:
-                return False
+        if token_data.expires_at and datetime.now() > token_data.expires_at:
+            return False
         return True
     
     def get_user_id_from_token(self, token):
-        token_data = self.db.get_token(token)
-        return token_data['user_id'] if token_data else None
+        token_data = Token.query.filter_by(token=token, revoked=False).first()
+        return token_data.user_id if token_data else None
     
     def revoke_token(self, token):
-        self.db.revoke_token(token)
+        token_data = Token.query.filter_by(token=token).first()
+        if token_data:
+            token_data.revoked = True
+            db.session.commit()
 
-# ========== INSTANCIAR CLASSES ==========
-
-db = Database()
-auth = AuthManager(db)
+auth = AuthManager()
 
 # ========== DECORATOR ==========
 
@@ -600,7 +228,191 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ========== ROTAS DE AUTENTICAÇÃO ==========
+# ========== FUNÇÕES DE BANCO DE DADOS ==========
+
+def get_user_by_email(email):
+    user = Usuario.query.filter_by(email=email).first()
+    return {'id': user.id, 'nome': user.nome, 'email': user.email, 'senha_hash': user.senha_hash} if user else None
+
+def get_user_by_id(user_id):
+    user = Usuario.query.get(user_id)
+    return {'id': user.id, 'nome': user.nome, 'email': user.email, 'created_at': user.created_at} if user else None
+
+def get_projetos(user_id):
+    projetos = Projeto.query.filter_by(user_id=user_id).order_by(Projeto.updated_at.desc()).all()
+    return [{'id': p.id, 'nome': p.nome, 'created_at': p.created_at, 'updated_at': p.updated_at} for p in projetos]
+
+def create_projeto(user_id, nome):
+    projeto = Projeto(user_id=user_id, nome=nome)
+    db.session.add(projeto)
+    db.session.commit()
+    return projeto.id
+
+def update_projeto(projeto_id, user_id, novo_nome):
+    projeto = Projeto.query.filter_by(id=projeto_id, user_id=user_id).first()
+    if projeto:
+        projeto.nome = novo_nome
+        projeto.updated_at = datetime.now()
+        db.session.commit()
+
+def delete_projeto(projeto_id, user_id):
+    Projeto.query.filter_by(id=projeto_id, user_id=user_id).delete()
+    db.session.commit()
+
+def get_arquivos(projeto_id, user_id):
+    arquivos = Arquivo.query.filter_by(projeto_id=projeto_id, user_id=user_id).all()
+    return [{'caminho': a.caminho, 'conteudo': a.conteudo} for a in arquivos]
+
+def save_arquivo(projeto_id, user_id, caminho, conteudo):
+    arquivo = Arquivo.query.filter_by(projeto_id=projeto_id, user_id=user_id, caminho=caminho).first()
+    if arquivo:
+        arquivo.conteudo = conteudo
+        arquivo.updated_at = datetime.now()
+    else:
+        arquivo = Arquivo(projeto_id=projeto_id, user_id=user_id, caminho=caminho, conteudo=conteudo)
+        db.session.add(arquivo)
+    db.session.commit()
+
+def delete_arquivo(projeto_id, user_id, caminho):
+    Arquivo.query.filter_by(projeto_id=projeto_id, user_id=user_id, caminho=caminho).delete()
+    db.session.commit()
+
+def get_pastas(projeto_id, user_id):
+    pastas = Pasta.query.filter_by(projeto_id=projeto_id, user_id=user_id).all()
+    return [{'nome': p.nome} for p in pastas]
+
+def create_pasta(projeto_id, user_id, nome):
+    pasta = Pasta(projeto_id=projeto_id, user_id=user_id, nome=nome)
+    db.session.add(pasta)
+    db.session.commit()
+
+def delete_pasta(projeto_id, user_id, nome):
+    Pasta.query.filter_by(projeto_id=projeto_id, user_id=user_id, nome=nome).delete()
+    db.session.commit()
+
+def get_tarefas(user_id):
+    tarefas = Tarefa.query.filter_by(user_id=user_id).order_by(Tarefa.created_at.desc()).all()
+    return [{'id': t.id, 'text': t.text, 'subject': t.subject, 'completed': t.completed} for t in tarefas]
+
+def create_tarefa(user_id, text, subject, completed=False):
+    tarefa = Tarefa(user_id=user_id, text=text, subject=subject, completed=completed)
+    db.session.add(tarefa)
+    db.session.commit()
+    return tarefa.id
+
+def update_tarefa(tarefa_id, completed):
+    Tarefa.query.filter_by(id=tarefa_id).update({'completed': completed})
+    db.session.commit()
+
+def delete_tarefa(tarefa_id, user_id):
+    Tarefa.query.filter_by(id=tarefa_id, user_id=user_id).delete()
+    db.session.commit()
+
+def get_metas(user_id):
+    metas = Meta.query.filter_by(user_id=user_id).order_by(Meta.created_at.desc()).all()
+    return [{'id': m.id, 'text': m.text, 'completed': m.completed} for m in metas]
+
+def create_meta(user_id, text, completed=False):
+    meta = Meta(user_id=user_id, text=text, completed=completed)
+    db.session.add(meta)
+    db.session.commit()
+    return meta.id
+
+def update_meta(meta_id, completed):
+    Meta.query.filter_by(id=meta_id).update({'completed': completed})
+    db.session.commit()
+
+def delete_meta(meta_id, user_id):
+    Meta.query.filter_by(id=meta_id, user_id=user_id).delete()
+    db.session.commit()
+
+def get_materiais(user_id):
+    materiais = Material.query.filter_by(user_id=user_id).order_by(Material.created_at.desc()).all()
+    return [{'id': m.id, 'name': m.name, 'link': m.link} for m in materiais]
+
+def create_material(user_id, name, link):
+    material = Material(user_id=user_id, name=name, link=link)
+    db.session.add(material)
+    db.session.commit()
+    return material.id
+
+def delete_material(material_id, user_id):
+    Material.query.filter_by(id=material_id, user_id=user_id).delete()
+    db.session.commit()
+
+def get_anotacoes(user_id):
+    anotacao = Anotacao.query.filter_by(user_id=user_id).first()
+    return anotacao.content if anotacao else None
+
+def save_anotacoes(user_id, content):
+    anotacao = Anotacao.query.filter_by(user_id=user_id).first()
+    if anotacao:
+        anotacao.content = content
+        anotacao.updated_at = datetime.now()
+    else:
+        anotacao = Anotacao(user_id=user_id, content=content)
+        db.session.add(anotacao)
+    db.session.commit()
+
+def get_stats(user_id):
+    stats = StatsEstudo.query.filter_by(user_id=user_id).first()
+    if stats:
+        return {'study_minutes_today': stats.study_minutes_today, 'pomodoro_sessions': stats.pomodoro_sessions}
+    return {'study_minutes_today': 0, 'pomodoro_sessions': 0}
+
+def update_stats(user_id, stats_data):
+    stats = StatsEstudo.query.filter_by(user_id=user_id).first()
+    if stats:
+        stats.study_minutes_today = stats_data.get('study_minutes_today', 0)
+        stats.pomodoro_sessions = stats_data.get('pomodoro_sessions', 0)
+        stats.last_update = datetime.now().date()
+    else:
+        stats = StatsEstudo(
+            user_id=user_id,
+            study_minutes_today=stats_data.get('study_minutes_today', 0),
+            pomodoro_sessions=stats_data.get('pomodoro_sessions', 0),
+            last_update=datetime.now().date()
+        )
+        db.session.add(stats)
+    db.session.commit()
+
+def reset_dados_estudos(user_id):
+    Tarefa.query.filter_by(user_id=user_id).delete()
+    Meta.query.filter_by(user_id=user_id).delete()
+    Material.query.filter_by(user_id=user_id).delete()
+    Anotacao.query.filter_by(user_id=user_id).delete()
+    StatsEstudo.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+
+def get_chats(user_id):
+    chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.updated_at.desc()).all()
+    return [{'id': c.id, 'titulo': c.titulo, 'created_at': c.created_at, 'updated_at': c.updated_at} for c in chats]
+
+def create_chat(user_id, titulo='Nova Conversa'):
+    chat = Chat(user_id=user_id, titulo=titulo)
+    db.session.add(chat)
+    db.session.commit()
+    return chat.id
+
+def delete_chat(chat_id, user_id):
+    Chat.query.filter_by(id=chat_id, user_id=user_id).delete()
+    db.session.commit()
+
+def get_mensagens_chat(chat_id, user_id):
+    mensagens = MensagemChat.query.filter_by(chat_id=chat_id, user_id=user_id).order_by(MensagemChat.created_at.asc()).all()
+    return [{'id': m.id, 'role': m.role, 'content': m.content, 'created_at': m.created_at} for m in mensagens]
+
+def save_mensagem(chat_id, user_id, role, content):
+    mensagem = MensagemChat(chat_id=chat_id, user_id=user_id, role=role, content=content)
+    db.session.add(mensagem)
+    Chat.query.filter_by(id=chat_id, user_id=user_id).update({'updated_at': datetime.now()})
+    db.session.commit()
+
+def update_chat_titulo(chat_id, user_id, titulo):
+    Chat.query.filter_by(id=chat_id, user_id=user_id).update({'titulo': titulo[:50]})
+    db.session.commit()
+
+# ========== ROTAS ==========
 
 @app.route('/')
 def home():
@@ -624,7 +436,7 @@ def cadastro():
         if len(senha) < 6:
             return jsonify({'error': 'A senha deve ter pelo menos 6 caracteres'}), 400
         
-        if db.get_user_by_email(email):
+        if get_user_by_email(email):
             return jsonify({'error': 'Email já cadastrado'}), 409
         
         user_id = auth.create_user(nome, email, senha)
@@ -676,15 +488,15 @@ def verificar_token():
 
 @app.route('/api/studio/projetos', methods=['GET'])
 @login_required
-def get_projetos():
+def get_projetos_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    projetos = db.get_projetos(user_id)
+    projetos = get_projetos(user_id)
     return jsonify(projetos), 200
 
 @app.route('/api/studio/projetos', methods=['POST'])
 @login_required
-def create_projeto():
+def create_projeto_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
@@ -693,12 +505,12 @@ def create_projeto():
     if not nome:
         return jsonify({'error': 'Nome do projeto é obrigatório'}), 400
     
-    projeto_id = db.create_projeto(user_id, nome)
+    projeto_id = create_projeto(user_id, nome)
     return jsonify({'id': projeto_id, 'success': True}), 201
 
 @app.route('/api/studio/projetos/<int:projeto_id>', methods=['PUT'])
 @login_required
-def update_projeto(projeto_id):
+def update_projeto_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
@@ -707,28 +519,28 @@ def update_projeto(projeto_id):
     if not novo_nome:
         return jsonify({'error': 'Novo nome é obrigatório'}), 400
     
-    db.update_projeto(projeto_id, user_id, novo_nome)
+    update_projeto(projeto_id, user_id, novo_nome)
     return jsonify({'success': True}), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>', methods=['DELETE'])
 @login_required
-def delete_projeto(projeto_id):
+def delete_projeto_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    db.delete_projeto(projeto_id, user_id)
+    delete_projeto(projeto_id, user_id)
     return jsonify({'success': True}), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>/arquivos', methods=['GET'])
 @login_required
-def get_arquivos(projeto_id):
+def get_arquivos_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    arquivos = db.get_arquivos(projeto_id, user_id)
+    arquivos = get_arquivos(projeto_id, user_id)
     return jsonify(arquivos), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>/arquivos', methods=['POST'])
 @login_required
-def save_arquivo(projeto_id):
+def save_arquivo_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
@@ -738,28 +550,28 @@ def save_arquivo(projeto_id):
     if not caminho:
         return jsonify({'error': 'Caminho do arquivo é obrigatório'}), 400
     
-    db.save_arquivo(projeto_id, user_id, caminho, conteudo)
+    save_arquivo(projeto_id, user_id, caminho, conteudo)
     return jsonify({'success': True}), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>/arquivos/<path:caminho>', methods=['DELETE'])
 @login_required
-def delete_arquivo(projeto_id, caminho):
+def delete_arquivo_route(projeto_id, caminho):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    db.delete_arquivo(projeto_id, user_id, caminho)
+    delete_arquivo(projeto_id, user_id, caminho)
     return jsonify({'success': True}), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>/pastas', methods=['GET'])
 @login_required
-def get_pastas(projeto_id):
+def get_pastas_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    pastas = db.get_pastas(projeto_id, user_id)
+    pastas = get_pastas(projeto_id, user_id)
     return jsonify(pastas), 200
 
 @app.route('/api/studio/projetos/<int:projeto_id>/pastas', methods=['POST'])
 @login_required
-def create_pasta(projeto_id):
+def create_pasta_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
@@ -768,12 +580,12 @@ def create_pasta(projeto_id):
     if not nome:
         return jsonify({'error': 'Nome da pasta é obrigatório'}), 400
     
-    db.create_pasta(projeto_id, user_id, nome)
+    create_pasta(projeto_id, user_id, nome)
     return jsonify({'success': True}), 201
 
 @app.route('/api/studio/projetos/<int:projeto_id>/pastas', methods=['DELETE'])
 @login_required
-def delete_pasta(projeto_id):
+def delete_pasta_route(projeto_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
@@ -782,319 +594,215 @@ def delete_pasta(projeto_id):
     if not nome:
         return jsonify({'error': 'Nome da pasta é obrigatório'}), 400
     
-    db.delete_pasta(projeto_id, user_id, nome)
+    delete_pasta(projeto_id, user_id, nome)
     return jsonify({'success': True}), 200
 
 # ========== ROTAS DE ESTUDOS ==========
 
 @app.route('/api/estudos/tarefas', methods=['GET'])
 @login_required
-def get_tarefas():
+def get_tarefas_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    tarefas = db.get_tarefas(user_id)
+    tarefas = get_tarefas(user_id)
     return jsonify(tarefas), 200
 
 @app.route('/api/estudos/tarefas', methods=['POST'])
 @login_required
-def create_tarefa():
+def create_tarefa_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    tarefa_id = db.create_tarefa(user_id, data['text'], data['subject'], data.get('completed', False))
+    tarefa_id = create_tarefa(user_id, data['text'], data['subject'], data.get('completed', False))
     return jsonify({'id': tarefa_id, 'success': True}), 201
 
 @app.route('/api/estudos/tarefas', methods=['PUT'])
 @login_required
-def update_tarefa():
+def update_tarefa_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.update_tarefa(data['id'], data.get('completed'))
+    update_tarefa(data['id'], data.get('completed'))
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/tarefas', methods=['DELETE'])
 @login_required
-def delete_tarefa():
+def delete_tarefa_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     tarefa_id = request.args.get('id')
-    db.delete_tarefa(tarefa_id, user_id)
+    delete_tarefa(tarefa_id, user_id)
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/metas', methods=['GET'])
 @login_required
-def get_metas():
+def get_metas_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    metas = db.get_metas(user_id)
+    metas = get_metas(user_id)
     return jsonify(metas), 200
 
 @app.route('/api/estudos/metas', methods=['POST'])
 @login_required
-def create_meta():
+def create_meta_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    meta_id = db.create_meta(user_id, data['text'], data.get('completed', False))
+    meta_id = create_meta(user_id, data['text'], data.get('completed', False))
     return jsonify({'id': meta_id, 'success': True}), 201
 
 @app.route('/api/estudos/metas', methods=['PUT'])
 @login_required
-def update_meta():
+def update_meta_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.update_meta(data['id'], data.get('completed'))
+    update_meta(data['id'], data.get('completed'))
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/metas', methods=['DELETE'])
 @login_required
-def delete_meta():
+def delete_meta_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     meta_id = request.args.get('id')
-    db.delete_meta(meta_id, user_id)
+    delete_meta(meta_id, user_id)
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/materiais', methods=['GET'])
 @login_required
-def get_materiais():
+def get_materiais_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    materiais = db.get_materiais(user_id)
+    materiais = get_materiais(user_id)
     return jsonify(materiais), 200
 
 @app.route('/api/estudos/materiais', methods=['POST'])
 @login_required
-def create_material():
+def create_material_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    material_id = db.create_material(user_id, data['name'], data['link'])
+    material_id = create_material(user_id, data['name'], data['link'])
     return jsonify({'id': material_id, 'success': True}), 201
 
 @app.route('/api/estudos/materiais/<int:material_id>', methods=['DELETE'])
 @login_required
-def delete_material(material_id):
+def delete_material_route(material_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    db.delete_material(material_id, user_id)
+    delete_material(material_id, user_id)
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/anotacoes', methods=['GET'])
 @login_required
-def get_anotacoes():
+def get_anotacoes_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    content = db.get_anotacoes(user_id)
+    content = get_anotacoes(user_id)
     return jsonify({'content': content or ''}), 200
 
 @app.route('/api/estudos/anotacoes', methods=['POST'])
 @login_required
-def save_anotacoes():
+def save_anotacoes_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.save_anotacoes(user_id, data['content'])
+    save_anotacoes(user_id, data['content'])
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/stats', methods=['GET'])
 @login_required
-def get_stats():
+def get_stats_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    stats = db.get_stats(user_id)
+    stats = get_stats(user_id)
     return jsonify(stats), 200
 
 @app.route('/api/estudos/stats', methods=['POST'])
 @login_required
-def update_stats():
+def update_stats_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.update_stats(user_id, data)
+    update_stats(user_id, data)
     return jsonify({'success': True}), 200
 
 @app.route('/api/estudos/reset', methods=['POST'])
 @login_required
-def reset_estudos():
+def reset_estudos_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    db.reset_dados_estudos(user_id)
+    reset_dados_estudos(user_id)
     return jsonify({'success': True, 'message': 'Dados resetados com sucesso'}), 200
 
 # ========== ROTAS DO CHAT ==========
 
 @app.route('/api/chat/chats', methods=['GET'])
 @login_required
-def get_chats():
+def get_chats_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    chats = db.get_chats(user_id)
+    chats = get_chats(user_id)
     return jsonify(chats), 200
 
 @app.route('/api/chat/chats', methods=['POST'])
 @login_required
-def create_chat():
+def create_chat_route():
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
     titulo = data.get('titulo', 'Nova Conversa')
-    chat_id = db.create_chat(user_id, titulo)
+    chat_id = create_chat(user_id, titulo)
     return jsonify({'id': chat_id, 'success': True}), 201
 
 @app.route('/api/chat/chats/<int:chat_id>', methods=['DELETE'])
 @login_required
-def delete_chat(chat_id):
+def delete_chat_route(chat_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    db.delete_chat(chat_id, user_id)
+    delete_chat(chat_id, user_id)
     return jsonify({'success': True}), 200
 
 @app.route('/api/chat/chats/<int:chat_id>/mensagens', methods=['GET'])
 @login_required
-def get_mensagens(chat_id):
+def get_mensagens_route(chat_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    mensagens = db.get_mensagens_chat(chat_id, user_id)
+    mensagens = get_mensagens_chat(chat_id, user_id)
     return jsonify(mensagens), 200
 
 @app.route('/api/chat/chats/<int:chat_id>/mensagens', methods=['POST'])
 @login_required
-def save_mensagem(chat_id):
+def save_mensagem_route(chat_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.save_mensagem(chat_id, user_id, data['role'], data['content'])
+    save_mensagem(chat_id, user_id, data['role'], data['content'])
     return jsonify({'success': True}), 200
 
 @app.route('/api/chat/chats/<int:chat_id>/titulo', methods=['PUT'])
 @login_required
-def update_chat_titulo(chat_id):
+def update_chat_titulo_route(chat_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
     data = request.json
-    db.update_chat_titulo(chat_id, user_id, data['titulo'])
+    update_chat_titulo(chat_id, user_id, data['titulo'])
     return jsonify({'success': True}), 200
-
-@app.route('/api/chat/send', methods=['POST'])
-@login_required
-def send_message():
-    """Rota para enviar mensagem e receber resposta do Gemini"""
-    token = request.headers.get('Authorization')
-    user_id = auth.get_user_id_from_token(token)
-    data = request.json
-    message = data.get('message', '')
-    chat_id = data.get('chat_id')
-    
-    if not message:
-        return jsonify({'error': 'Mensagem vazia'}), 400
-    
-    if not chat_id:
-        # Criar novo chat se não existir
-        chat_id = db.create_chat(user_id)
-    
-    # Salvar mensagem do usuário
-    db.save_mensagem(chat_id, user_id, 'user', message)
-    
-    try:
-        # Chamar API do Gemini
-        response = call_gemini_api(message)
-        
-        # Salvar resposta do bot
-        db.save_mensagem(chat_id, user_id, 'bot', response)
-        
-        # Atualizar título se for a primeira mensagem
-        chats = db.get_chats(user_id)
-        current_chat = next((c for c in chats if c['id'] == chat_id), None)
-        if current_chat and current_chat['titulo'] == 'Nova Conversa':
-            new_title = message[:40] + ('...' if len(message) > 40 else '')
-            db.update_chat_titulo(chat_id, user_id, new_title)
-        
-        return jsonify({
-            'success': True,
-            'chat_id': chat_id,
-            'response': response
-        }), 200
-        
-    except Exception as e:
-        print(f"Erro no Gemini: {e}")
-        return jsonify({'error': str(e)}), 500
-
-def call_gemini_api(message):
-    """Função para chamar a API do Gemini"""
-    url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
-    
-    payload = {
-        "contents": [{
-            "parts": [{"text": message}]
-        }],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 800,
-            "topP": 0.95
-        }
-    }
-    
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-        data = response.json()
-        
-        if response.status_code == 200:
-            # Extrair o texto da resposta
-            text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
-            if text:
-                return text
-            else:
-                return "Desculpe, não consegui processar sua solicitação."
-        else:
-            error_msg = data.get('error', {}).get('message', 'Erro desconhecido')
-            print(f"Erro Gemini API: {error_msg}")
-            return f"Erro na API: {error_msg}"
-            
-    except requests.exceptions.Timeout:
-        return "A requisição demorou muito. Tente novamente."
-    except Exception as e:
-        print(f"Erro na chamada Gemini: {e}")
-        return "Ocorreu um erro ao processar sua mensagem."
-    
-# ========== ROTA DE DEBUG ==========
-
-@app.route('/api/studio/projetos/<int:projeto_id>/arquivos/debug', methods=['GET'])
-@login_required
-def debug_arquivos(projeto_id):
-    token = request.headers.get('Authorization')
-    user_id = auth.get_user_id_from_token(token)
-    arquivos = db.get_arquivos(projeto_id, user_id)
-    return jsonify({
-        'projeto_id': projeto_id,
-        'user_id': user_id,
-        'arquivos': arquivos
-    }), 200
 
 # ========== INICIAR SERVIDOR ==========
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        print("✅ Banco de dados inicializado com sucesso!")
+        print(f"📁 Pasta de dados: {DATA_DIR}")
+    
     print("\n" + "="*50)
     print("🚀 SERVIDOR EVOLVEGLOBAL")
     print("="*50)
-    print("\n✅ Banco de dados inicializado")
-    print("📱 API disponível em: http://localhost:5000")
-    print("\n📋 Rotas disponíveis:")
-    print("   POST   /api/cadastro")
-    print("   POST   /api/login")
-    print("   GET    /api/verificar-token")
-    print("   GET    /api/studio/projetos")
-    print("   POST   /api/studio/projetos")
-    print("   GET    /api/chat/chats")
-    print("   POST   /api/chat/chats")
-    print("   GET    /api/chat/chats/<id>/mensagens")
-    print("   POST   /api/chat/chats/<id>/mensagens")
-    print("   GET    /api/chat/api-key")
-    print("   POST   /api/chat/api-key")
-    print("\n" + "="*50)
-    print("🔥 Servidor rodando em http://localhost:5000")
+    print(f"📱 API disponível em: http://localhost:5000")
+    print(f"💾 Banco de dados: SQLite em {DATA_DIR}")
     print("="*50 + "\n")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
