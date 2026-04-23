@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: evolveglobal-api
+    runtime: python
+    repo: https://github.com/Iago-saraiva/EvolveGlobal-.git 
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///data/evolveglobal.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /api/teste
+    autoDeploy: true
+    disk:
+      name: sqlite-data
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1
+
+      
