@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import hashlib
 from dotenv import load_dotenv
 
+
 # Carregar variáveis de ambiente
 load_dotenv()
 
