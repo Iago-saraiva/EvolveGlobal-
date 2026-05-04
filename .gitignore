@@ -7,11 +7,11 @@ env/
 venv/
 .venv/
 
-# Banco de dados SQLite
+# Banco de dados
 *.db
 *.sqlite
 *.sqlite3
-data/
+backend/data/
 
 # Environment variables
 .env
@@ -29,5 +29,3 @@ data/
 # OS
 .DS_Store
 Thumbs.db
-
-

@@ -43,6 +43,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -165,6 +166,7 @@
                 opacity: 0;
                 transform: translateX(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -224,10 +226,14 @@
         }
 
         @keyframes typing {
-            0%, 60%, 100% {
+
+            0%,
+            60%,
+            100% {
                 transform: translateY(0);
                 opacity: 0.5;
             }
+
             30% {
                 transform: translateY(-10px);
                 opacity: 1;
@@ -310,11 +316,12 @@
                 width: 95%;
                 height: 90vh;
             }
+
             .message-content {
                 max-width: 85%;
             }
         }
-        
+
         .footer {
             margin-top: 10px;
         }
@@ -370,11 +377,11 @@
             <button onclick="window.location.href='/index.html'">← Voltar</button>
         </div>
     </div>
-
+    <script src="config.js"></script>
     <script>
         // Configuração
         const API_URL = 'http://localhost:5000/api';
-        
+
         // Variáveis globais
         let currentChatId = null;
         let chats = [];
@@ -399,17 +406,17 @@
                 'Authorization': token,
                 ...options.headers
             };
-            
+
             const response = await fetch(`${API_URL}${endpoint}`, {
                 ...options,
                 headers
             });
-            
+
             if (response.status === 401) {
                 window.location.href = 'login.html';
                 throw new Error('Sessão expirada');
             }
-            
+
             return response;
         }
 
@@ -419,7 +426,7 @@
                 const response = await apiRequest('/chat/chats');
                 chats = await response.json();
                 renderChatsList();
-                
+
                 if (chats.length === 0) {
                     await createNewChat();
                 } else if (!currentChatId) {
@@ -448,10 +455,10 @@
             try {
                 const response = await apiRequest(`/chat/chats/${chatId}/mensagens`);
                 const mensagens = await response.json();
-                
+
                 currentChatId = chatId;
                 messagesContainer.innerHTML = '';
-                
+
                 if (mensagens.length === 0) {
                     addMessage('Olá! 👋 Sou o Assistente Gemini AI da Evolve Global.\n\nComo posso ajudar você hoje?', 'bot');
                 } else {
@@ -459,7 +466,7 @@
                         addMessage(msg.content, msg.role);
                     });
                 }
-                
+
                 highlightActiveChat();
                 scrollToBottom();
             } catch (error) {
@@ -476,9 +483,9 @@
                         chat_id: currentChatId
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     if (!currentChatId) {
                         currentChatId = data.chat_id;
@@ -496,11 +503,11 @@
 
         async function deleteChat(chatId) {
             if (!confirm('Tem certeza que deseja excluir esta conversa?')) return;
-            
+
             try {
                 await apiRequest(`/chat/chats/${chatId}`, { method: 'DELETE' });
                 await loadChats();
-                
+
                 if (chats.length > 0) {
                     await loadChatMessages(chats[0].id);
                 } else {
@@ -593,7 +600,7 @@
 
             const now = Date.now();
             const timeSinceLastMessage = (now - lastMessageTime) / 1000;
-            
+
             if (lastMessageTime > 0 && timeSinceLastMessage < 15) {
                 const remainingWait = Math.ceil(15 - timeSinceLastMessage);
                 addMessage(`⏳ Aguarde ${remainingWait} segundos entre as mensagens.`, 'bot');
@@ -614,7 +621,7 @@
                 removeTypingIndicator();
                 addMessage(response, 'bot');
                 lastMessageTime = Date.now();
-                
+
                 // Recarregar chats para atualizar título se necessário
                 await loadChats();
             } catch (error) {
@@ -631,7 +638,7 @@
         newChatBtn.onclick = createNewChat;
         clearButton.onclick = clearChat;
         sendButton.onclick = sendMessage;
-        
+
         toggleChatsBtn.onclick = () => {
             chatsList.classList.toggle('show');
             toggleChatsBtn.textContent = chatsList.classList.contains('show') ? '📋 Ocultar' : '📋 Histórico';
@@ -656,17 +663,17 @@
                 window.location.href = 'login.html';
                 return false;
             }
-            
+
             try {
                 const response = await fetch(`${API_URL}/verificar-token`, {
                     headers: { 'Authorization': token }
                 });
-                
+
                 if (!response.ok) {
                     window.location.href = 'login.html';
                     return false;
                 }
-                
+
                 return true;
             } catch (error) {
                 window.location.href = 'login.html';
@@ -678,10 +685,10 @@
         async function init() {
             const loggedIn = await checkLogin();
             if (!loggedIn) return;
-            
+
             await loadChats();
         }
-        
+
         init();
     </script>
 </body>
