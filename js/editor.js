@@ -631,7 +631,6 @@ codeEditor.addEventListener('keydown', function(e) {
         updateStatusBar();
     }
     
-    // Ctrl+S - Salvar (sem atualizar preview)
     if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
         saveCurrentFile();

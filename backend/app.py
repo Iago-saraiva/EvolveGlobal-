@@ -1,5 +1,7 @@
 import os
-from flask import Flask, request, jsonify
+import sys
+from pathlib import Path
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -9,15 +11,49 @@ from datetime import datetime, timedelta
 import hashlib
 from dotenv import load_dotenv
 
-
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Criar pasta para dados persistentes
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-os.makedirs(DATA_DIR, exist_ok=True)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyAJciP00ofIiv9NfSgt8b-9MLuYZyPtzoM')
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
 
-# Configuração do banco de dados
+# ========== CONFIGURAÇÃO DO BANCO DE DADOS ==========
+# Obter o diretório base de forma absoluta
+BASE_DIR = Path(__file__).parent.resolve()
+DATA_DIR = BASE_DIR / 'data'
+
+# Criar a pasta data (com permissões)
+try:
+    DATA_DIR.mkdir(exist_ok=True, parents=True)
+    print(f"✅ Pasta data criada em: {DATA_DIR}")
+    
+    # Testar permissão de escrita
+    test_file = DATA_DIR / '.write_test'
+    test_file.write_text('test')
+    test_file.unlink()
+    print(f"✅ Permissão de escrita confirmada em: {DATA_DIR}")
+    
+except Exception as e:
+    print(f"❌ Erro na pasta data: {e}")
+    # Fallback: usar diretório temporário
+    import tempfile
+    DATA_DIR = Path(tempfile.gettempdir()) / 'evolveglobal_data'
+    DATA_DIR.mkdir(exist_ok=True, parents=True)
+    print(f"⚠️ Usando diretório alternativo: {DATA_DIR}")
+
+# Caminho completo do banco de dados
+DB_PATH = DATA_DIR / 'evolveglobal.db'
+DATABASE_URL = f'sqlite:///{DB_PATH}'
+
+TEMPLATES_DIR = BASE_DIR.parent / 'templates'
+STATIC_ROOT = BASE_DIR.parent
+
+print(f"📁 Pasta do banco: {DATA_DIR}")
+print(f"📄 Arquivo do banco: {DB_PATH}")
+print(f"📁 Pasta de templates: {TEMPLATES_DIR}")
+print(f"🔗 URL: {DATABASE_URL}")
+
+# ========== CONFIGURAÇÃO DO FLASK ==========
 class Base(DeclarativeBase):
     pass
 
@@ -29,13 +65,10 @@ app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(16))
 # Configuração do CORS
 CORS(app, supports_credentials=True, origins=['*'])
 
-# Configuração do banco de dados SQLite
-database_url = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(DATA_DIR, "evolveglobal.db")}')
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# Configuração do SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'check_same_thread': False},
-    'pool_size': 1,  # SQLite só suporta uma conexão por vez
-    'pool_recycle': 3600,
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -626,12 +659,11 @@ def update_tarefa_route():
     update_tarefa(data['id'], data.get('completed'))
     return jsonify({'success': True}), 200
 
-@app.route('/api/estudos/tarefas', methods=['DELETE'])
+@app.route('/api/estudos/tarefas/<int:tarefa_id>', methods=['DELETE'])
 @login_required
-def delete_tarefa_route():
+def delete_tarefa_route(tarefa_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    tarefa_id = request.args.get('id')
     delete_tarefa(tarefa_id, user_id)
     return jsonify({'success': True}), 200
 
@@ -661,12 +693,11 @@ def update_meta_route():
     update_meta(data['id'], data.get('completed'))
     return jsonify({'success': True}), 200
 
-@app.route('/api/estudos/metas', methods=['DELETE'])
+@app.route('/api/estudos/metas/<int:meta_id>', methods=['DELETE'])
 @login_required
-def delete_meta_route():
+def delete_meta_route(meta_id):
     token = request.headers.get('Authorization')
     user_id = auth.get_user_id_from_token(token)
-    meta_id = request.args.get('id')
     delete_meta(meta_id, user_id)
     return jsonify({'success': True}), 200
 
@@ -737,7 +768,122 @@ def reset_estudos_route():
     reset_dados_estudos(user_id)
     return jsonify({'success': True, 'message': 'Dados resetados com sucesso'}), 200
 
-# ========== ROTAS DO CHAT ==========
+# ========== ROTAS PARA GERENCIAR CHAVE API ==========
+
+@app.route('/api/chat/api-key', methods=['GET'])
+@login_required
+def get_user_api_key():
+    """Obtém a chave API do usuário"""
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    
+    # Buscar chave no banco
+    api_key_record = ApiKey.query.filter_by(user_id=user_id, provider='gemini').first()
+    
+    if api_key_record:
+        # Retornar apenas se existe (não mostrar a chave por segurança)
+        return jsonify({'has_key': True, 'key_exists': True})
+    else:
+        return jsonify({'has_key': False, 'key_exists': False})
+
+@app.route('/api/chat/api-key', methods=['POST'])
+@login_required
+def save_user_api_key():
+    """Salva a chave API do usuário"""
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    data = request.json
+    api_key = data.get('api_key', '')
+    
+    if not api_key:
+        return jsonify({'error': 'Chave API é obrigatória'}), 400
+    
+    # Verificar se já existe
+    existing = ApiKey.query.filter_by(user_id=user_id, provider='gemini').first()
+    
+    if existing:
+        existing.api_key = api_key
+        existing.updated_at = datetime.now()
+    else:
+        new_key = ApiKey(user_id=user_id, provider='gemini', api_key=api_key)
+        db.session.add(new_key)
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Chave API salva com sucesso'}), 200
+
+@app.route('/api/chat/api-key', methods=['DELETE'])
+@login_required
+def delete_user_api_key():
+    """Remove a chave API do usuário"""
+    token = request.headers.get('Authorization')
+    user_id = auth.get_user_id_from_token(token)
+    
+    ApiKey.query.filter_by(user_id=user_id, provider='gemini').delete()
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Chave API removida'}), 200
+
+# ========== ROTA DO CHAT COM GEMINI (USANDO CHAVE DO BANCO) ==========
+@app.route('/api/chat/send', methods=['POST'])
+@login_required
+def chat_send():
+    try:
+        token = request.headers.get('Authorization')
+        user_id = auth.get_user_id_from_token(token)
+        data = request.json
+        chat_id = data.get('chat_id')
+        message = data.get('message', '').strip()
+        
+        if not chat_id:
+            return jsonify({'error': 'Chat ID é obrigatório'}), 400
+        if not message:
+            return jsonify({'error': 'Mensagem vazia'}), 400
+        
+        chat = Chat.query.filter_by(id=chat_id, user_id=user_id).first()
+        if not chat:
+            return jsonify({'error': 'Chat não encontrado'}), 404
+        
+        save_mensagem(chat_id, user_id, 'user', message)
+        
+        # Buscar chave API do usuário no banco
+        api_key_record = ApiKey.query.filter_by(user_id=user_id, provider='gemini').first()
+        
+        # Usar chave do usuário ou fallback para a chave padrão
+        if api_key_record and api_key_record.api_key:
+            api_key = api_key_record.api_key
+            print(f"🔑 Usando chave do usuário {user_id}")
+        else:
+            api_key = GEMINI_API_KEY  # Chave padrão do sistema
+            print(f"🔑 Usando chave padrão do sistema")
+        
+        # Chamar API do Gemini
+        import requests
+        url = f"{GEMINI_API_URL}?key={api_key}"
+        payload = {
+            "contents": [{
+                "parts": [{"text": message}]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 800
+            }
+        }
+        
+        response = requests.post(url, json=payload, timeout=30)
+        result = response.json()
+        
+        if response.status_code == 200:
+            reply = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'Desculpe, não entendi.')
+            save_mensagem(chat_id, user_id, 'assistant', reply)
+            return jsonify({'success': True, 'response': reply, 'chat_id': chat_id}), 200
+        else:
+            error_msg = result.get('error', {}).get('message', 'Erro desconhecido')
+            return jsonify({'error': f'Erro na API Gemini: {error_msg}'}), 500
+            
+    except Exception as e:
+        print(f"Erro no chat: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chat/chats', methods=['GET'])
 @login_required
@@ -791,19 +937,90 @@ def update_chat_titulo_route(chat_id):
     update_chat_titulo(chat_id, user_id, data['titulo'])
     return jsonify({'success': True}), 200
 
-# ========== INICIAR SERVIDOR ==========
+# ========== ROTAS DOS TEMPLATES E ESTÁTICOS ==========
 
+def serve_static_file(directory, filename):
+    return send_from_directory(str(directory), filename)
+
+@app.route('/')
+@app.route('/index.html')
+def serve_index():
+    return serve_static_file(STATIC_ROOT, 'index.html')
+
+@app.route('/login.html')
+def serve_login():
+    return serve_static_file(TEMPLATES_DIR, 'login.html')
+
+@app.route('/cadastro.html')
+def serve_cadastro():
+    return serve_static_file(TEMPLATES_DIR, 'cadastro.html')
+
+@app.route('/chat.html')
+def serve_chat():
+    return serve_static_file(TEMPLATES_DIR, 'chat.html')
+
+@app.route('/estudo.html')
+def serve_estudo():
+    return serve_static_file(TEMPLATES_DIR, 'estudo.html')
+
+@app.route('/criando.html')
+def serve_criando():
+    return serve_static_file(TEMPLATES_DIR, 'criando.html')
+
+@app.route('/templates/<path:filename>')
+def serve_template_files(filename):
+    return serve_static_file(TEMPLATES_DIR, filename)
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    return serve_static_file(STATIC_ROOT / 'css', filename)
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return serve_static_file(STATIC_ROOT / 'js', filename)
+
+@app.route('/images/<path:filename>')
+def serve_images(filename):
+    return serve_static_file(STATIC_ROOT / 'images', filename)
+
+
+# ========== INICIALIZAÇÃO ==========
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
-        print("✅ Banco de dados inicializado com sucesso!")
-        print(f"📁 Pasta de dados: {DATA_DIR}")
+        try:
+            # Garantir que o diretório existe antes de criar as tabelas
+            DATA_DIR.mkdir(exist_ok=True, parents=True)
+            
+            # Criar as tabelas
+            db.create_all()
+            
+            # Verificar se o arquivo foi criado
+            if DB_PATH.exists():
+                print(f"✅ Banco de dados criado com sucesso!")
+                print(f"📍 Localização: {DB_PATH}")
+                print(f"📊 Tamanho: {DB_PATH.stat().st_size} bytes")
+            else:
+                print(f"⚠️ Banco de dados NÃO foi criado em: {DB_PATH}")
+                
+                # Tentar criar um arquivo vazio manualmente
+                try:
+                    DB_PATH.touch()
+                    print(f"✅ Arquivo criado manualmente em: {DB_PATH}")
+                except Exception as e:
+                    print(f"❌ Erro ao criar manualmente: {e}")
+                    
+        except Exception as e:
+            print(f"❌ Erro ao criar banco de dados: {e}")
+            print("🔧 Usando banco de dados em memória...")
+            app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+            db.create_all()
+            print("✅ Usando banco de dados em memória (dados serão perdidos ao reiniciar)")
     
     print("\n" + "="*50)
     print("🚀 SERVIDOR EVOLVEGLOBAL")
     print("="*50)
     print(f"📱 API disponível em: http://localhost:5000")
-    print(f"💾 Banco de dados: SQLite em {DATA_DIR}")
+    print(f"💾 Banco de dados: {app.config['SQLALCHEMY_DATABASE_URI']}")
     print("="*50 + "\n")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
